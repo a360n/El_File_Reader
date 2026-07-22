@@ -140,7 +140,7 @@
                 }
             </div>
 
-            <!-- Three Action Buttons -->
+            <!-- Action Buttons -->
             <div class="d-grid gap-3 mb-4">
                 <button type="button" class="btn btn-custom-green btn-lg d-flex align-items-center justify-content-center gap-2" id="btnMatch">
                     <i class="fa-solid fa-circle-check fs-4"></i>
@@ -150,6 +150,12 @@
                 <button type="button" class="btn btn-custom-red btn-lg d-flex align-items-center justify-content-center gap-2" id="btnMismatch">
                     <i class="fa-solid fa-circle-xmark fs-4"></i>
                     <span>معلومات info غير مطابقة لل marked</span>
+                </button>
+
+                <!-- NEW BUTTON: Re-evaluation (Moves folder to Re_evaluation) -->
+                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnReEvaluation" title="قص ونقل هذا اللوح بملفاته الثلاثة إلى مجلد Re_evaluation لمراجعته لاحقاً">
+                    <i class="fa-solid fa-folder-arrow-up fs-4"></i>
+                    <span>إعادة التقييم (نقل إلى Re_evaluation)</span>
                 </button>
             </div>
 
@@ -225,6 +231,7 @@
 
         const btnMatch = document.getElementById('btnMatch');
         const btnMismatch = document.getElementById('btnMismatch');
+        const btnReEvaluation = document.getElementById('btnReEvaluation');
         const correctionPanel = document.getElementById('correctionPanel');
         const btnAddDefect = document.getElementById('btnAddDefect');
         const selectCol = document.getElementById('selectCol');
@@ -296,6 +303,38 @@
         btnMismatch.addEventListener('click', () => {
             isMatchedDecision = false;
             updateUIState();
+        });
+
+        // Re-evaluation Button Handler
+        btnReEvaluation.addEventListener('click', async () => {
+            if (!confirm(`هل أنت تأكد من قص ونقل هذا اللوح (${folderName}) إلى مجلد Re_evaluation لمراجعته لاحقاً؟`)) {
+                return;
+            }
+
+            btnReEvaluation.disabled = true;
+            btnReEvaluation.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
+
+            try {
+                const response = await fetch('/Audit/MoveToReEvaluation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    // Navigate to next panel or reload
+                    window.location.href = `/Audit/Index?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء النقل: ' + res.message);
+                    btnReEvaluation.disabled = false;
+                    btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (نقل إلى Re_evaluation)</span>';
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnReEvaluation.disabled = false;
+                btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (نقل إلى Re_evaluation)</span>';
+            }
         });
 
         btnAddDefect.addEventListener('click', () => {

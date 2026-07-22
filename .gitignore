@@ -5,11 +5,13 @@ obj/
 .vscode/
 *.user
 
-# Keep empty container and Restructured folders via .gitkeep
+# Keep empty container, Restructured, and Re_evaluation folders via .gitkeep
 container/*
 !container/.gitkeep
 Restructured/*
 !Restructured/.gitkeep
+Re_evaluation/*
+!Re_evaluation/.gitkeep
 
 # OS Files
 .DS_Store

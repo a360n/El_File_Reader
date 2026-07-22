@@ -88,6 +88,26 @@ public class AuditController : Controller
         return Json(new { success = true, message = "تم حفظ القرار بنجاح" });
     }
 
+    [HttpPost]
+    public IActionResult MoveToReEvaluation([FromBody] AuditSaveRequest request)
+    {
+        if (string.IsNullOrEmpty(request.FolderName))
+        {
+            return BadRequest(new { success = false, message = "FolderName is required" });
+        }
+
+        bool moved = _restructurer.MoveToReEvaluation(request.FolderName);
+
+        if (moved)
+        {
+            return Json(new { success = true, message = $"تم قص ونقل اللوح ({request.FolderName}) إلى مجلد Re_evaluation بنجاح" });
+        }
+        else
+        {
+            return Json(new { success = false, message = $"فشل نقل المجلد ({request.FolderName}) إلى Re_evaluation" });
+        }
+    }
+
     public IActionResult Log()
     {
         var records = _auditStorage.GetAllRecords();

@@ -7,6 +7,7 @@ public class FileRestructurerService
 {
     private readonly string _containerPath;
     private readonly string _restructuredPath;
+    private readonly string _reEvaluationPath;
 
     public FileRestructurerService(IWebHostEnvironment env)
     {
@@ -14,16 +15,19 @@ public class FileRestructurerService
         
         string candidateContainer = Path.Combine(parentDir, "container");
         string candidateRestructured = Path.Combine(parentDir, "Restructured");
+        string candidateReEvaluation = Path.Combine(parentDir, "Re_evaluation");
 
         if (!Directory.Exists(candidateContainer) && Directory.Exists(Path.Combine(env.ContentRootPath, "container")))
         {
             _containerPath = Path.Combine(env.ContentRootPath, "container");
             _restructuredPath = Path.Combine(env.ContentRootPath, "Restructured");
+            _reEvaluationPath = Path.Combine(env.ContentRootPath, "Re_evaluation");
         }
         else
         {
             _containerPath = candidateContainer;
             _restructuredPath = candidateRestructured;
+            _reEvaluationPath = candidateReEvaluation;
         }
 
         EnsureDirectoriesExist();
@@ -31,6 +35,7 @@ public class FileRestructurerService
 
     public string ContainerPath => _containerPath;
     public string RestructuredPath => _restructuredPath;
+    public string ReEvaluationPath => _reEvaluationPath;
 
     public void EnsureDirectoriesExist()
     {
@@ -41,6 +46,61 @@ public class FileRestructurerService
         if (!Directory.Exists(_restructuredPath))
         {
             Directory.CreateDirectory(_restructuredPath);
+        }
+        if (!Directory.Exists(_reEvaluationPath))
+        {
+            Directory.CreateDirectory(_reEvaluationPath);
+        }
+    }
+
+    public bool MoveToReEvaluation(string folderName)
+    {
+        EnsureDirectoriesExist();
+        string source = Path.Combine(_restructuredPath, folderName);
+        string target = Path.Combine(_reEvaluationPath, folderName);
+
+        if (!Directory.Exists(source)) return false;
+
+        try
+        {
+            if (Directory.Exists(target))
+            {
+                Directory.Delete(target, true);
+            }
+
+            Directory.Move(source, target);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error moving {folderName} to Re_evaluation: {ex.Message}");
+            try
+            {
+                CopyDirectory(source, target);
+                Directory.Delete(source, true);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    private void CopyDirectory(string sourceDir, string destinationDir)
+    {
+        Directory.CreateDirectory(destinationDir);
+
+        foreach (string file in Directory.GetFiles(sourceDir))
+        {
+            string dest = Path.Combine(destinationDir, Path.GetFileName(file));
+            File.Copy(file, dest, true);
+        }
+
+        foreach (string subDir in Directory.GetDirectories(sourceDir))
+        {
+            string dest = Path.Combine(destinationDir, Path.GetFileName(subDir));
+            CopyDirectory(subDir, dest);
         }
     }
 
@@ -69,7 +129,7 @@ public class FileRestructurerService
         {
             if (!triplet.IsComplete)
             {
-                // Ignore incomplete triplets as per user directive
+                // Ignore incomplete triplets
                 continue;
             }
 
