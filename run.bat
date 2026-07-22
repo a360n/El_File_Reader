@@ -22,12 +22,12 @@ echo.
 :: Navigate to EcoLabReaderApp directory
 cd /d "%~dp0EcoLabReaderApp"
 
-echo [2/3] Opening browser at http://localhost:5260 ...
+echo [2/3] Opening browser at http://localhost:5199 ...
 timeout /t 2 /nobreak >nul
-start "" "http://localhost:5260"
+start "" "http://localhost:5199"
 
-echo [3/3] Starting EcoLAB Reader Application...
+echo [3/3] Starting EcoLAB Reader Application on http://localhost:5199 ...
 echo.
-dotnet run
+dotnet run --urls "http://localhost:5199"
 
 pause
