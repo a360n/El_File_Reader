@@ -1,0 +1,14 @@
+# Build / Binaries
+bin/
+obj/
+.vs/
+.vscode/
+*.user
+
+# Data Folders
+container/
+Restructured/
+
+# OS Files
+.DS_Store
+Thumbs.db

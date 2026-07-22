@@ -1,0 +1,154 @@
+@model List<EcoLabReaderApp.Models.AuditRecord>
+@{
+    Layout = "_Layout";
+    var summary = ViewBag.Summary as EcoLabReaderApp.Models.AuditSummary ?? new EcoLabReaderApp.Models.AuditSummary();
+}
+
+@section HeaderActions {
+    <a href="/Audit/Index" class="btn btn-outline-light rounded-3 px-4">
+        <i class="fa-solid fa-arrow-right me-2"></i>عودة لصفحة الفحص والتدقيق
+    </a>
+}
+
+<div class="row g-4 mb-4">
+    <!-- Right Side: Summary Statistics Card -->
+    <div class="col-lg-8">
+        <div class="card-custom p-4">
+            <h5 class="fw-bold mb-4 text-warning">
+                <i class="fa-solid fa-chart-line me-2"></i>كارت معلومات وإحصائيات قراءة قارئ الـ EL
+            </h5>
+
+            <div class="row g-3 text-center">
+                <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <div class="text-muted small mb-1">إجمالي الألواح المدققة</div>
+                        <div class="fs-3 fw-bold text-info">@summary.TotalAudited</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <div class="text-muted small mb-1">عدد المطابقة بين info و marked</div>
+                        <div class="fs-3 fw-bold text-success">@summary.MatchedCount</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <div class="text-muted small mb-1">عدد غير المطابقة</div>
+                        <div class="fs-3 fw-bold text-danger">@summary.MismatchedCount</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <div class="text-muted small mb-1">نسبة دقة قارئ الـ EL</div>
+                        <div class="fs-3 fw-bold text-warning">@summary.AccuracyPercentage%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Left Side: PDF Export Button -->
+    <div class="col-lg-4 d-flex align-items-center">
+        <div class="card-custom p-4 w-100 text-center">
+            <h6 class="fw-bold mb-3 text-light"><i class="fa-solid fa-file-pdf text-danger me-2"></i>تصدير التقرير الرسمي</h6>
+            <p class="text-muted small mb-4">توليد ملف PDF جاهز للطباعة يحتوي على جدول تدقيق الألواح وبطاقة الإحصائيات.</p>
+            
+            <a href="/Audit/ExportPdf" target="_blank" class="btn btn-custom-red btn-lg w-100 py-3 fw-bold d-flex align-items-center justify-content-center gap-2">
+                <i class="fa-solid fa-file-export fs-4"></i>
+                <span>توليد ملف PDF بالجدول والإحصائيات</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Main Audit Log Data Table -->
+<div class="card-custom p-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="fw-bold m-0"><i class="fa-solid fa-table-list text-primary me-2"></i>سجل مطابقة قراءة الـ EL والألواح</h5>
+        <span class="text-muted">عدد السجلات: <strong>@Model.Count</strong></span>
+    </div>
+
+    @if (Model.Count == 0)
+    {
+        <div class="alert alert-secondary text-center py-4 rounded-3">
+            <i class="fa-solid fa-inbox fs-3 d-block mb-2"></i>
+            <span>لا توجد سجلات مدققة بعد. يرجى البدء بفرز وتدقيق الألواح من صفحة الفحص والتدقيق.</span>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-custom align-middle">
+                <thead>
+                    <tr>
+                        <th style="width: 5%;">#</th>
+                        <th style="width: 25%;">الرقم التسلسلي للوح</th>
+                        <th style="width: 20%;">info مطابق لل marked ؟</th>
+                        <th style="width: 25%;">بيانات info المقروءة</th>
+                        <th style="width: 25%;">بيانات المصحح (التصحيح المعتمد)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ int idx = 1; }
+                    @foreach (var item in Model)
+                    {
+                        <tr>
+                            <td>@(idx++)</td>
+                            <td>
+                                <strong class="text-warning fs-6">@item.SerialNumber</strong>
+                                <small class="text-muted d-block font-monospace">@item.FolderName</small>
+                            </td>
+                            <td>
+                                @if (item.IsMatched)
+                                {
+                                    <span class="badge badge-pass fs-6"><i class="fa-solid fa-check me-1"></i>نعم (مطابق)</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-fail fs-6"><i class="fa-solid fa-xmark me-1"></i>لا (غير مطابق)</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.ElDefects.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var def in item.ElDefects)
+                                        {
+                                            <span class="badge bg-secondary">@def</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-success small">لا توجد عيوب</span>
+                                }
+                            </td>
+                            <td>
+                                @if (item.HumanCorrections.Count > 0)
+                                {
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var def in item.HumanCorrections)
+                                        {
+                                            if (def == "مطابق للمقروء")
+                                            {
+                                                <span class="badge bg-success opacity-75">@def</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark font-monospace fw-bold">@def</span>
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

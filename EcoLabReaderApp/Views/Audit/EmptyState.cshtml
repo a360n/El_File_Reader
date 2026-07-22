@@ -1,0 +1,40 @@
+@{
+    Layout = "_Layout";
+}
+
+<div class="row justify-content-center my-5">
+    <div class="col-md-8 text-center">
+        <div class="card-custom p-5">
+            <div class="mb-4">
+                <i class="fa-solid fa-folder-open text-warning display-1"></i>
+            </div>
+            <h3 class="fw-bold mb-3">مرحباً بك في نظام فرز وتدقيق ملفات الـ EL والألواح الشمسية</h3>
+            <p class="text-muted fs-5 mb-4">
+                لم يتم العثور على أية ألواح مفروزة داخل مجلد <code>Restructured</code>.
+            </p>
+
+            <div class="alert alert-info text-start p-4 mb-4 rounded-4" style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3);">
+                <h5 class="fw-bold text-info"><i class="fa-solid fa-circle-info me-2"></i>خطوات البدء وتجميع الملفات:</h5>
+                <ol class="m-0 ps-3 mt-2 lh-lg">
+                    <li>قم بوضع مجلدات أو ملفات الألواح غير المرتبة داخل مجلد <strong>container</strong> الواقع على المسار:
+                        <br><code>@ViewBag.ContainerPath</code>
+                    </li>
+                    <li>يقوم البرنامج تلقائياً بالبحث عن الثلاثيات المكتملة لكافة الألواح:
+                        <ul>
+                            <li>الصورة الخام <code>XXXXX.1.tif</code></li>
+                            <li>ملف المعلومات <code>XXXXX.el</code></li>
+                            <li>الصورة المؤشرة <code>ANM..._XXXXX-1.tif</code></li>
+                        </ul>
+                    </li>
+                    <li>يتم نقل الملفات وتسميتها إلى <code>row.tif</code> و <code>info.el</code> و <code>marked.tif</code> وتنظيف مجلد <code>container</code>.</li>
+                </ol>
+            </div>
+
+            <form action="/Audit/TriggerRestructure" method="post" id="restructureForm">
+                <button type="submit" class="btn btn-custom-blue btn-lg px-5">
+                    <i class="fa-solid fa-rotate me-2"></i>إعادة فحص وفرز الملفات الآن
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
