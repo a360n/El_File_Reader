@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using EcoLabReaderApp.Models;
 using EcoLabReaderApp.Services;
-using System.IO;
 
 namespace EcoLabReaderApp.Controllers;
 
@@ -108,10 +107,10 @@ public class AuditController : Controller
 
         if (!System.IO.File.Exists(tiffPath)) return NotFound();
 
-        byte[]? bmpBytes = _imageService.ConvertTiffToPngBytes(tiffPath);
-        if (bmpBytes == null) return NotFound();
+        var (imageBytes, contentType) = _imageService.ConvertTiffToImageBytes(tiffPath);
+        if (imageBytes == null) return NotFound();
 
-        return this.File(bmpBytes, "image/bmp");
+        return this.File(imageBytes, contentType);
     }
 
     [HttpGet]
