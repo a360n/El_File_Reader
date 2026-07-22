@@ -10,7 +10,6 @@ public class FileRestructurerService
 
     public FileRestructurerService(IWebHostEnvironment env)
     {
-        // Target container and Restructured in the parent folder (solution root)
         string parentDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, ".."));
         
         string candidateContainer = Path.Combine(parentDir, "container");
@@ -70,13 +69,6 @@ public class FileRestructurerService
                 continue;
             }
 
-            // Check disk space safety before processing panel
-            if (!HasSufficientDiskSpace(_restructuredPath, 50 * 1024 * 1024)) // 50MB safety buffer
-            {
-                Console.WriteLine("Warning: Low disk space detected. Pausing restructuring safely.");
-                break;
-            }
-
             try
             {
                 // Get timestamp from .el file
@@ -85,6 +77,7 @@ public class FileRestructurerService
 
                 string targetFolder = Path.Combine(_restructuredPath, timestampFolder);
                 
+                // If folder already exists, append unique suffix
                 if (Directory.Exists(targetFolder))
                 {
                     targetFolder = Path.Combine(_restructuredPath, $"{timestampFolder}_{triplet.CommonKey}");
@@ -92,26 +85,17 @@ public class FileRestructurerService
 
                 Directory.CreateDirectory(targetFolder);
 
+                // Target paths
                 string targetRawTif = Path.Combine(targetFolder, "row.tif");
                 string targetInfoEl = Path.Combine(targetFolder, "info.el");
                 string targetMarkedTif = Path.Combine(targetFolder, "marked.tif");
 
-                // STEP 1: Copy all 3 files
-                File.Copy(triplet.RawTifPath, targetRawTif, true);
-                File.Copy(triplet.InfoElPath, targetInfoEl, true);
-                File.Copy(triplet.MarkedTifPath, targetMarkedTif, true);
+                // Move files atomically & instantly (0 extra space required)
+                SafeMoveFile(triplet.RawTifPath, targetRawTif);
+                SafeMoveFile(triplet.InfoElPath, targetInfoEl);
+                SafeMoveFile(triplet.MarkedTifPath, targetMarkedTif);
 
-                // STEP 2: Verify target files exist and sizes match before deleting originals
-                if (File.Exists(targetRawTif) && new FileInfo(targetRawTif).Length > 0 &&
-                    File.Exists(targetInfoEl) && new FileInfo(targetInfoEl).Length > 0 &&
-                    File.Exists(targetMarkedTif) && new FileInfo(targetMarkedTif).Length > 0)
-                {
-                    // STEP 3: Delete originals ONLY after 100% successful copy verification
-                    TryDeleteFile(triplet.RawTifPath);
-                    TryDeleteFile(triplet.InfoElPath);
-                    TryDeleteFile(triplet.MarkedTifPath);
-                    organizedCount++;
-                }
+                organizedCount++;
             }
             catch (Exception ex)
             {
@@ -125,16 +109,25 @@ public class FileRestructurerService
         return organizedCount;
     }
 
-    private bool HasSufficientDiskSpace(string path, long requiredBytes)
+    private void SafeMoveFile(string source, string destination)
     {
+        if (!File.Exists(source)) return;
+
+        if (File.Exists(destination))
+        {
+            File.Delete(destination);
+        }
+
         try
         {
-            var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(path)) ?? "C:\\");
-            return drive.AvailableFreeSpace > requiredBytes;
+            // Move is instantaneous on the same drive & uses 0 extra space
+            File.Move(source, destination);
         }
         catch
         {
-            return true; // Fallback if drive info is restricted
+            // Fallback if cross-drive move
+            File.Copy(source, destination, true);
+            File.Delete(source);
         }
     }
 
@@ -146,6 +139,7 @@ public class FileRestructurerService
         {
             string fileName = Path.GetFileName(filePath);
 
+            // Pattern 1: Raw TIF (e.g. 51410.1.tif or 79422.1.tif)
             var rawMatch = Regex.Match(fileName, @"^(\d{4,6})\.1\.tif$", RegexOptions.IgnoreCase);
             if (rawMatch.Success)
             {
@@ -154,6 +148,7 @@ public class FileRestructurerService
                 continue;
             }
 
+            // Pattern 2: Info EL (e.g. 51410.el or 79422.el)
             var infoMatch = Regex.Match(fileName, @"^(\d{4,6})\.el$", RegexOptions.IgnoreCase);
             if (infoMatch.Success)
             {
@@ -162,6 +157,7 @@ public class FileRestructurerService
                 continue;
             }
 
+            // Pattern 3: Marked TIF (e.g. ANM26040006582_2026-04-01_16-01-05_51410-1.tif or ANM..._79422-1.tif)
             var markedMatch = Regex.Match(fileName, @"_(\d{4,6})-[0-9]+\.tif$", RegexOptions.IgnoreCase);
             if (!markedMatch.Success)
             {
@@ -187,15 +183,6 @@ public class FileRestructurerService
             dict[key] = triplet;
         }
         return triplet;
-    }
-
-    private void TryDeleteFile(string path)
-    {
-        try
-        {
-            if (File.Exists(path)) File.Delete(path);
-        }
-        catch { }
     }
 
     private void CleanEmptyFolders(string path)
