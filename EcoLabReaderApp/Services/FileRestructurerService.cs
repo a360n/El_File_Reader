@@ -135,54 +135,56 @@ public class FileRestructurerService
     {
         var dict = new Dictionary<string, PanelTriplet>(StringComparer.OrdinalIgnoreCase);
 
-        // Group files by filename pattern
+        // Strategy 1: Global Key Matching (matching panel digits e.g. 51410, 79360, etc.)
         foreach (var filePath in filePaths)
         {
             string fileName = Path.GetFileName(filePath);
 
-            // Pattern 1: Raw TIF (e.g. 51410.1.tif or 79422.1.tif or 3045.1.tif)
-            var rawMatch = Regex.Match(fileName, @"^(\d{4,6})\.1\.tif$", RegexOptions.IgnoreCase);
-            if (rawMatch.Success)
-            {
-                string key = rawMatch.Groups[1].Value;
-                GetOrCreateTriplet(dict, key).RawTifPath = filePath;
-                continue;
-            }
+            var digitMatch = Regex.Match(fileName, @"(\d{4,6})", RegexOptions.IgnoreCase);
+            if (!digitMatch.Success) continue;
 
-            // Pattern 2: Info EL (e.g. 51410.el or 79422.el or 3045.el)
-            var infoMatch = Regex.Match(fileName, @"^(\d{4,6})\.el$", RegexOptions.IgnoreCase);
-            if (infoMatch.Success)
-            {
-                string key = infoMatch.Groups[1].Value;
-                GetOrCreateTriplet(dict, key).InfoElPath = filePath;
-                continue;
-            }
+            string key = digitMatch.Groups[1].Value;
+            var triplet = GetOrCreateTriplet(dict, key);
 
-            // Pattern 3: Marked TIF
-            // e.g. ANM26040006582_2026-04-01_16-01-05_51410-1.tif or ANM..._79422-1.tif or 51410_marked.tif
-            var markedMatch = Regex.Match(fileName, @"_(\d{4,6})-[0-9]+\.tif$", RegexOptions.IgnoreCase);
-            if (!markedMatch.Success)
+            if (fileName.EndsWith(".el", StringComparison.OrdinalIgnoreCase))
             {
-                markedMatch = Regex.Match(fileName, @"_(\d{4,6})\.tif$", RegexOptions.IgnoreCase);
+                triplet.InfoElPath = filePath;
             }
-
-            if (markedMatch.Success)
+            else if (Regex.IsMatch(fileName, @"\.1\.tif$", RegexOptions.IgnoreCase) || Regex.IsMatch(fileName, @"_1\.tif$", RegexOptions.IgnoreCase))
             {
-                string key = markedMatch.Groups[1].Value;
-                GetOrCreateTriplet(dict, key).MarkedTifPath = filePath;
-                continue;
+                triplet.RawTifPath = filePath;
             }
-
-            // Fallback for any other marked TIF format containing 4-6 digit ID that is not raw tif
-            var fallbackDigits = Regex.Match(fileName, @"(\d{4,6})", RegexOptions.IgnoreCase);
-            if (fallbackDigits.Success && (fileName.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)))
+            else if (fileName.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
             {
-                string key = fallbackDigits.Groups[1].Value;
+                triplet.MarkedTifPath = filePath;
+            }
+        }
+
+        // Strategy 2: Subfolder Grouping Fallback
+        var subfolders = filePaths.Select(Path.GetDirectoryName)
+                                  .Distinct()
+                                  .Where(d => !string.IsNullOrEmpty(d) && !d.Equals(_containerPath, StringComparison.OrdinalIgnoreCase))
+                                  .ToList();
+
+        foreach (var subDir in subfolders)
+        {
+            var dirFiles = filePaths.Where(f => Path.GetDirectoryName(f) == subDir).ToList();
+            var elFiles = dirFiles.Where(f => f.EndsWith(".el", StringComparison.OrdinalIgnoreCase)).ToList();
+            var tifFiles = dirFiles.Where(f => f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            if (elFiles.Count == 1 && tifFiles.Count == 2)
+            {
+                string elFile = elFiles[0];
+                string key = Path.GetFileNameWithoutExtension(elFile);
+
                 var triplet = GetOrCreateTriplet(dict, key);
-                if (string.IsNullOrEmpty(triplet.MarkedTifPath))
-                {
-                    triplet.MarkedTifPath = filePath;
-                }
+                triplet.InfoElPath = elFile;
+
+                var raw = tifFiles.FirstOrDefault(f => Path.GetFileName(f).EndsWith(".1.tif", StringComparison.OrdinalIgnoreCase)) ?? tifFiles[0];
+                var marked = tifFiles.FirstOrDefault(f => f != raw) ?? tifFiles[1];
+
+                triplet.RawTifPath = raw;
+                triplet.MarkedTifPath = marked;
             }
         }
 
