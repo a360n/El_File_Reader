@@ -108,6 +108,26 @@ public class AuditController : Controller
         }
     }
 
+    [HttpPost]
+    public IActionResult MoveToUseless([FromBody] AuditSaveRequest request)
+    {
+        if (string.IsNullOrEmpty(request.FolderName))
+        {
+            return BadRequest(new { success = false, message = "FolderName is required" });
+        }
+
+        bool moved = _restructurer.MoveToUseless(request.FolderName);
+
+        if (moved)
+        {
+            return Json(new { success = true, message = $"تم قص ونقل اللوح ({request.FolderName}) إلى مجلد Useless بنجاح" });
+        }
+        else
+        {
+            return Json(new { success = false, message = $"فشل نقل المجلد ({request.FolderName}) إلى Useless" });
+        }
+    }
+
     public IActionResult Log()
     {
         var records = _auditStorage.GetAllRecords();

@@ -152,10 +152,16 @@
                     <span>معلومات info غير مطابقة لل marked</span>
                 </button>
 
-                <!-- NEW BUTTON: Re-evaluation (Moves folder to Re_evaluation) -->
-                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnReEvaluation" title="قص ونقل هذا اللوح بملفاته الثلاثة إلى مجلد Re_evaluation لمراجعته لاحقاً">
+                <!-- Re-evaluation Button (Moves folder to Re_evaluation immediately) -->
+                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnReEvaluation" title="قص ونقل هذا اللوح بملفاته إلى مجلد Re_evaluation لمراجعته لاحقاً">
                     <i class="fa-solid fa-folder-arrow-up fs-4"></i>
-                    <span>إعادة التقييم (نقل إلى Re_evaluation)</span>
+                    <span>إعادة التقييم (Re_evaluation)</span>
+                </button>
+
+                <!-- NEW BUTTON: Useless / Damaged Panels (Moves folder to Useless immediately) -->
+                <button type="button" class="btn btn-dark border border-danger text-danger btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnUseless" title="قص ونقل هذا اللوح بملفاته إلى مجلد Useless (تالف / غير صالح)">
+                    <i class="fa-solid fa-trash-can fs-4"></i>
+                    <span>ألواح تالفة (Useless)</span>
                 </button>
             </div>
 
@@ -232,6 +238,7 @@
         const btnMatch = document.getElementById('btnMatch');
         const btnMismatch = document.getElementById('btnMismatch');
         const btnReEvaluation = document.getElementById('btnReEvaluation');
+        const btnUseless = document.getElementById('btnUseless');
         const correctionPanel = document.getElementById('correctionPanel');
         const btnAddDefect = document.getElementById('btnAddDefect');
         const selectCol = document.getElementById('selectCol');
@@ -305,12 +312,8 @@
             updateUIState();
         });
 
-        // Re-evaluation Button Handler
+        // Re-evaluation Button Handler (Immediate cut & move without confirmation modal)
         btnReEvaluation.addEventListener('click', async () => {
-            if (!confirm(`هل أنت تأكد من قص ونقل هذا اللوح (${folderName}) إلى مجلد Re_evaluation لمراجعته لاحقاً؟`)) {
-                return;
-            }
-
             btnReEvaluation.disabled = true;
             btnReEvaluation.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
 
@@ -323,17 +326,43 @@
 
                 const res = await response.json();
                 if (res.success) {
-                    // Navigate to next panel or reload
                     window.location.href = `/Audit/Index?panelIndex=${currentIndex}`;
                 } else {
                     alert('خطأ أثناء النقل: ' + res.message);
                     btnReEvaluation.disabled = false;
-                    btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (نقل إلى Re_evaluation)</span>';
+                    btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (Re_evaluation)</span>';
                 }
             } catch (err) {
                 alert('خطأ بالاتصال بالسيرفر: ' + err.message);
                 btnReEvaluation.disabled = false;
-                btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (نقل إلى Re_evaluation)</span>';
+                btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (Re_evaluation)</span>';
+            }
+        });
+
+        // Useless / Damaged Button Handler (Immediate cut & move without confirmation modal)
+        btnUseless.addEventListener('click', async () => {
+            btnUseless.disabled = true;
+            btnUseless.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
+
+            try {
+                const response = await fetch('/Audit/MoveToUseless', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/Index?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء النقل: ' + res.message);
+                    btnUseless.disabled = false;
+                    btnUseless.innerHTML = '<i class="fa-solid fa-trash-can fs-4"></i><span>ألواح تالفة (Useless)</span>';
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnUseless.disabled = false;
+                btnUseless.innerHTML = '<i class="fa-solid fa-trash-can fs-4"></i><span>ألواح تالفة (Useless)</span>';
             }
         });
 
