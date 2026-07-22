@@ -9,22 +9,26 @@
 }
 
 @section HeaderActions {
-    <div class="d-flex align-items-center gap-3">
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-warning rounded-3 px-3" id="btnHeaderRestructure" title="إعادة فرز أي ملفات جديدة في مجلد container">
+            <i class="fa-solid fa-rotate me-1"></i>فرز الـ container
+        </button>
+
         @if (hasPrevious)
         {
             <a href="/Audit/Index?panelIndex=@(currentIndex - 1)" class="btn btn-outline-light rounded-3 px-3">
-                <i class="fa-solid fa-arrow-right me-2"></i>عودة للوح السابق
+                <i class="fa-solid fa-arrow-right me-1"></i>عودة للوح السابق
             </a>
         }
         else
         {
             <button class="btn btn-outline-secondary rounded-3 px-3" disabled>
-                <i class="fa-solid fa-arrow-right me-2"></i>عودة للوح السابق
+                <i class="fa-solid fa-arrow-right me-1"></i>عودة للوح السابق
             </button>
         }
 
         <a href="/Audit/Log" class="btn btn-custom-blue rounded-3 px-4">
-            <i class="fa-solid fa-chart-pie me-2"></i>سجل مطابقة قراءة الـ EL
+            <i class="fa-solid fa-chart-pie me-1"></i>سجل مطابقة قراءة الـ EL
         </a>
 
         <span class="badge bg-secondary fs-6 px-3 py-2 rounded-3">
@@ -228,6 +232,24 @@
         const correctionsContainer = document.getElementById('correctionsContainer');
         const btnSaveConfirm = document.getElementById('btnSaveConfirm');
         const selectionStatusAlert = document.getElementById('selectionStatusAlert');
+        const btnHeaderRestructure = document.getElementById('btnHeaderRestructure');
+
+        if (btnHeaderRestructure) {
+            btnHeaderRestructure.addEventListener('click', async () => {
+                btnHeaderRestructure.disabled = true;
+                btnHeaderRestructure.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري الفرز...';
+                try {
+                    const res = await fetch('/Audit/TriggerRestructure', { method: 'POST' });
+                    const data = await res.json();
+                    alert(data.message);
+                    window.location.reload();
+                } catch (e) {
+                    alert('حدث خطأ أثناء الفرز: ' + e.message);
+                    btnHeaderRestructure.disabled = false;
+                    btnHeaderRestructure.innerHTML = '<i class="fa-solid fa-rotate me-1"></i>فرز الـ container';
+                }
+            });
+        }
 
         function updateUIState() {
             if (isMatchedDecision) {
