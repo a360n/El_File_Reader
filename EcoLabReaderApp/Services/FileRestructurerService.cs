@@ -5,21 +5,28 @@ namespace EcoLabReaderApp.Services;
 
 public class FileRestructurerService
 {
-    private readonly string _rootPath;
     private readonly string _containerPath;
     private readonly string _restructuredPath;
 
     public FileRestructurerService(IWebHostEnvironment env)
     {
-        // Root path is parent directory or workspace root
-        _rootPath = Path.Combine(env.ContentRootPath, "..", "..");
-        if (!Directory.Exists(_rootPath))
-        {
-            _rootPath = env.ContentRootPath;
-        }
+        // Target container and Restructured in the parent folder (solution root)
+        string parentDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, ".."));
+        
+        string candidateContainer = Path.Combine(parentDir, "container");
+        string candidateRestructured = Path.Combine(parentDir, "Restructured");
 
-        _containerPath = Path.Combine(_rootPath, "container");
-        _restructuredPath = Path.Combine(_rootPath, "Restructured");
+        // If running directly inside app dir, fallback to ContentRootPath
+        if (!Directory.Exists(candidateContainer) && Directory.Exists(Path.Combine(env.ContentRootPath, "container")))
+        {
+            _containerPath = Path.Combine(env.ContentRootPath, "container");
+            _restructuredPath = Path.Combine(env.ContentRootPath, "Restructured");
+        }
+        else
+        {
+            _containerPath = candidateContainer;
+            _restructuredPath = candidateRestructured;
+        }
 
         EnsureDirectoriesExist();
     }
@@ -139,7 +146,6 @@ public class FileRestructurerService
             var markedMatch = Regex.Match(fileName, @"_(\d{4,6})-[0-9]+\.tif$", RegexOptions.IgnoreCase);
             if (!markedMatch.Success)
             {
-                // Alternative pattern: ANM..._51410.tif or similar
                 markedMatch = Regex.Match(fileName, @"_(\d{4,6})\.tif$", RegexOptions.IgnoreCase);
             }
 
