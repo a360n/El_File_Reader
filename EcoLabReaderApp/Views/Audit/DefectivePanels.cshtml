@@ -1,0 +1,406 @@
+@model EcoLabReaderApp.Models.ElPanelInfo
+@{
+    Layout = "_Layout";
+    int currentIndex = ViewBag.CurrentIndex;
+    int totalDefectivePanels = ViewBag.TotalDefectivePanels;
+    int totalDefectiveCells = ViewBag.TotalDefectiveCells;
+    bool hasPrevious = ViewBag.HasPrevious;
+    bool hasNext = ViewBag.HasNext;
+    var existingRecord = ViewBag.ExistingRecord as EcoLabReaderApp.Models.AuditRecord;
+}
+
+@section HeaderActions {
+    <div class="d-flex align-items-center gap-2">
+        <a href="/Audit/Index" class="btn btn-outline-light rounded-3 px-3">
+            <i class="fa-solid fa-house me-1"></i>الواجهة الرئيسية (جميع الألواح)
+        </a>
+
+        @if (hasPrevious)
+        {
+            <a href="/Audit/DefectivePanels?panelIndex=@(currentIndex - 1)" class="btn btn-outline-warning rounded-3 px-3">
+                <i class="fa-solid fa-arrow-right me-1"></i>اللوح المعيب السابق
+            </a>
+        }
+        else
+        {
+            <button class="btn btn-outline-secondary rounded-3 px-3" disabled>
+                <i class="fa-solid fa-arrow-right me-1"></i>اللوح المعيب السابق
+            </button>
+        }
+
+        @if (hasNext)
+        {
+            <a href="/Audit/DefectivePanels?panelIndex=@(currentIndex + 1)" class="btn btn-warning text-dark rounded-3 px-3 fw-bold">
+                اللوح المعيب التالي<i class="fa-solid fa-arrow-left ms-1"></i>
+            </a>
+        }
+
+        <span class="badge bg-danger fs-6 px-3 py-2 rounded-3">
+            لوح معيب @(currentIndex + 1) من @totalDefectivePanels
+        </span>
+    </div>
+}
+
+<!-- Top KPI Aggregate Metrics Banner -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card-custom p-3 border-start border-4 border-danger d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-muted d-block mb-1">عدد الألواح التي تحتوي على خلايا سيئة:</small>
+                <h3 class="fw-bold text-danger m-0">@totalDefectivePanels <span class="fs-6 text-muted font-normal">لوح معيب</span></h3>
+            </div>
+            <div class="fs-1 text-danger opacity-75">
+                <i class="fa-solid fa-solar-panel"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card-custom p-3 border-start border-4 border-warning d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-muted d-block mb-1">إجمالي عدد الخلايا السيئة الكلي لجميع الألواح:</small>
+                <h3 class="fw-bold text-warning m-0">@totalDefectiveCells <span class="fs-6 text-muted font-normal">خلية متضررة</span></h3>
+            </div>
+            <div class="fs-1 text-warning opacity-75">
+                <i class="fa-solid fa-bug"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Main Left Area: Images & info.el Metadata -->
+    <div class="col-lg-8">
+        <div class="card-custom p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold m-0 text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>معاينة اللوح المعيب: <code>@Model.FolderName</code></h5>
+                <span class="badge bg-secondary">مجلد: @Model.FolderName</span>
+            </div>
+
+            <!-- Two Images Side by Side -->
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="img-container">
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark opacity-75">row.tif (الصورة الخام)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName&type=row" alt="Raw Tiff Image" id="imgRaw" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="img-container">
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-danger opacity-75">marked.tif (المؤشرة بالعيوب)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName&type=marked" alt="Marked Tiff Image" id="imgMarked" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info.el Metadata Card -->
+        <div class="card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-circle-info text-primary me-2"></i>المعلومات المقروءة من ملف info.el</h5>
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-muted d-block mb-1">الرقم التسلسلي للوح:</small>
+                        <strong class="fs-5 text-warning">@Model.SerialNumber</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-muted d-block mb-1">التاريخ والوقت بالضبط:</small>
+                        <strong class="fs-6 text-light">@Model.Timestamp</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-muted d-block mb-1">حالة القارئ EL:</small>
+                        <span class="badge badge-fail fs-6">❌ FAIL (معيب - يحتوي عيوب)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3 p-3 rounded-3 bg-dark border border-danger">
+                <small class="text-danger fw-bold d-block mb-2"><i class="fa-solid fa-bug me-1"></i>أماكن الخلايا السيئة المقروءة من info.el (عدد الخلايا: @Model.Defects.Count):</small>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var def in Model.Defects)
+                    {
+                        <span class="badge bg-danger fs-5 px-3 py-2 border border-warning"><i class="fa-solid fa-triangle-exclamation me-1"></i>@def</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Sidebar: Decision Controls -->
+    <div class="col-lg-4">
+        <div class="card-custom p-4 position-sticky" style="top: 90px;">
+            <h5 class="fw-bold mb-4 border-bottom border-secondary pb-3 text-warning">
+                <i class="fa-solid fa-clipboard-check me-2"></i>قرار التدقيق للوح المعيب
+            </h5>
+
+            <!-- Current Selection Status -->
+            <div id="selectionStatusAlert" class="alert alert-secondary text-center mb-4 rounded-3">
+                @if (existingRecord != null)
+                {
+                    if (existingRecord.IsMatched)
+                    {
+                        <span class="text-success fw-bold"><i class="fa-solid fa-check-double me-1"></i>تم القرار سابقاً: مطابق</span>
+                    }
+                    else
+                    {
+                        <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i>تم القرار سابقاً: غير مطابق</span>
+                    }
+                }
+                else
+                {
+                    <span>اختر أحد القرارات للوح المعيب:</span>
+                }
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-3 mb-4">
+                <button type="button" class="btn btn-custom-green btn-lg d-flex align-items-center justify-content-center gap-2" id="btnMatch">
+                    <i class="fa-solid fa-circle-check fs-4"></i>
+                    <span>معلومات info مطابقة لل marked</span>
+                </button>
+
+                <button type="button" class="btn btn-custom-red btn-lg d-flex align-items-center justify-content-center gap-2" id="btnMismatch">
+                    <i class="fa-solid fa-circle-xmark fs-4"></i>
+                    <span>معلومات info غير مطابقة لل marked</span>
+                </button>
+
+                <!-- Re-evaluation Button (Immediate cut & move) -->
+                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnReEvaluation" title="قص ونقل هذا اللوح بملفاته إلى مجلد Re_evaluation">
+                    <i class="fa-solid fa-folder-arrow-up fs-4"></i>
+                    <span>إعادة التقييم (Re_evaluation)</span>
+                </button>
+
+                <!-- Useless / Damaged Button (Immediate cut & move) -->
+                <button type="button" class="btn btn-dark border border-danger text-danger btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnUseless" title="قص ونقل هذا اللوح بملفاته إلى مجلد Useless">
+                    <i class="fa-solid fa-trash-can fs-4"></i>
+                    <span>ألواح تالفة (Useless)</span>
+                </button>
+            </div>
+
+            <!-- Correction Panel -->
+            <div id="correctionPanel" class="p-3 rounded-3 bg-dark border border-danger mb-4 d-none">
+                <h6 class="fw-bold text-danger mb-3">
+                    <i class="fa-solid fa-sliders me-2"></i>تصحيح أماكن الخلايا التالفة
+                </h6>
+
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label text-muted small">العمود (A-F):</label>
+                        <select class="form-select bg-secondary text-white border-0" id="selectCol">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                            <option value="E">E</option>
+                            <option value="F">F</option>
+                        </select>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label text-muted small">الصف (01-24):</label>
+                        <select class="form-select bg-secondary text-white border-0" id="selectRow">
+                            @for (int r = 1; r <= 24; r++)
+                            {
+                                <option value="@(r.ToString("D2"))">@(r.ToString("D2"))</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-outline-warning w-100 mb-3" id="btnAddDefect">
+                    <i class="fa-solid fa-plus me-1"></i>إضافة خلية معيبة أخرى
+                </button>
+
+                <div class="mb-2">
+                    <small class="text-muted d-block mb-1">المشاكل المضافة للتصحيح:</small>
+                    <div id="correctionsContainer" class="d-flex flex-wrap gap-2"></div>
+                </div>
+            </div>
+
+            <!-- Button 3: Save & Confirm -->
+            <button type="button" class="btn btn-custom-blue btn-lg w-100 py-3 fw-bold fs-5 d-flex align-items-center justify-content-center gap-2" id="btnSaveConfirm">
+                <i class="fa-solid fa-floppy-disk fs-4"></i>
+                <span>حفظ وإقرار</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        const folderName = "@Model.FolderName";
+        const serialNumber = "@Model.SerialNumber";
+        const currentIndex = @currentIndex;
+        const totalDefectivePanels = @totalDefectivePanels;
+        const hasNext = @(hasNext.ToString().ToLower());
+
+        let isMatchedDecision = true;
+        let correctedDefects = [];
+
+        @if (existingRecord != null)
+        {
+            <text>
+            isMatchedDecision = @(existingRecord.IsMatched.ToString().ToLower());
+            correctedDefects = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(existingRecord.HumanCorrections));
+            </text>
+        }
+
+        const btnMatch = document.getElementById('btnMatch');
+        const btnMismatch = document.getElementById('btnMismatch');
+        const btnReEvaluation = document.getElementById('btnReEvaluation');
+        const btnUseless = document.getElementById('btnUseless');
+        const correctionPanel = document.getElementById('correctionPanel');
+        const btnAddDefect = document.getElementById('btnAddDefect');
+        const selectCol = document.getElementById('selectCol');
+        const selectRow = document.getElementById('selectRow');
+        const correctionsContainer = document.getElementById('correctionsContainer');
+        const btnSaveConfirm = document.getElementById('btnSaveConfirm');
+        const selectionStatusAlert = document.getElementById('selectionStatusAlert');
+
+        function updateUIState() {
+            if (isMatchedDecision) {
+                btnMatch.classList.add('shadow-lg', 'border', 'border-2', 'border-white');
+                btnMismatch.classList.remove('shadow-lg', 'border', 'border-2', 'border-white');
+                correctionPanel.classList.add('d-none');
+                selectionStatusAlert.className = "alert alert-success text-center mb-4 rounded-3";
+                selectionStatusAlert.innerHTML = '<i class="fa-solid fa-check-double me-1"></i> القرار المحدد: معلومات info مطابقة للـ marked';
+            } else {
+                btnMismatch.classList.add('shadow-lg', 'border', 'border-2', 'border-white');
+                btnMatch.classList.remove('shadow-lg', 'border', 'border-2', 'border-white');
+                correctionPanel.classList.remove('d-none');
+                selectionStatusAlert.className = "alert alert-danger text-center mb-4 rounded-3";
+                selectionStatusAlert.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i> القرار المحدد: معلومات info غير مطابقة للـ marked';
+            }
+            renderCorrections();
+        }
+
+        function renderCorrections() {
+            correctionsContainer.innerHTML = '';
+            if (correctedDefects.length === 0 && !isMatchedDecision) {
+                correctionsContainer.innerHTML = '<span class="text-muted small">لم يتم إضافة مشاكل مصححة بعد.</span>';
+                return;
+            }
+
+            correctedDefects.forEach((def, idx) => {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-warning text-dark fs-6 d-flex align-items-center gap-2 px-3 py-2';
+                badge.innerHTML = `<span>${def}</span> <i class="fa-solid fa-xmark text-danger cursor-pointer" onclick="removeDefect(${idx})"></i>`;
+                correctionsContainer.appendChild(badge);
+            });
+        }
+
+        function removeDefect(idx) {
+            correctedDefects.splice(idx, 1);
+            renderCorrections();
+        }
+
+        btnMatch.addEventListener('click', () => {
+            isMatchedDecision = true;
+            updateUIState();
+        });
+
+        btnMismatch.addEventListener('click', () => {
+            isMatchedDecision = false;
+            updateUIState();
+        });
+
+        btnReEvaluation.addEventListener('click', async () => {
+            btnReEvaluation.disabled = true;
+            btnReEvaluation.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
+
+            try {
+                const response = await fetch('/Audit/MoveToReEvaluation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/DefectivePanels?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء النقل: ' + res.message);
+                    btnReEvaluation.disabled = false;
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnReEvaluation.disabled = false;
+            }
+        });
+
+        btnUseless.addEventListener('click', async () => {
+            btnUseless.disabled = true;
+            btnUseless.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
+
+            try {
+                const response = await fetch('/Audit/MoveToUseless', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/DefectivePanels?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء النقل: ' + res.message);
+                    btnUseless.disabled = false;
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnUseless.disabled = false;
+            }
+        });
+
+        btnAddDefect.addEventListener('click', () => {
+            if (correctedDefects.length >= 10) {
+                alert('عذراً، الحد الأقصى للمشاكل المضافة هو 10 مشاكل فقط.');
+                return;
+            }
+
+            const cellName = selectCol.value + selectRow.value;
+            if (!correctedDefects.includes(cellName)) {
+                correctedDefects.push(cellName);
+                renderCorrections();
+            } else {
+                alert('هذه الخلية مضافة بالفعل في قائمة التصحيح.');
+            }
+        });
+
+        btnSaveConfirm.addEventListener('click', async () => {
+            const payload = {
+                folderName: folderName,
+                panelId: serialNumber,
+                isMatched: isMatchedDecision,
+                humanCorrections: isMatchedDecision ? ["مطابق للمقروء"] : correctedDefects
+            };
+
+            try {
+                const response = await fetch('/Audit/SaveDecision', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    if (hasNext) {
+                        window.location.href = `/Audit/DefectivePanels?panelIndex=${currentIndex + 1}`;
+                    } else {
+                        alert('تم الانتهاء من تدقيق جميع الألواح المعيبة!');
+                        window.location.href = '/Audit/Log';
+                    }
+                } else {
+                    alert('خطأ في حفظ القرار: ' + res.message);
+                }
+            } catch (err) {
+                alert('خطأ في الاتصال بالسيرفر: ' + err.message);
+            }
+        });
+
+        updateUIState();
+    </script>
+}

@@ -59,6 +59,48 @@ public class AuditController : Controller
         return View(elInfo);
     }
 
+    public IActionResult DefectivePanels(int panelIndex = 0)
+    {
+        _restructurer.RunRestructuring();
+        var allFolders = GetRestructuredFolders();
+
+        var defectiveList = new List<(string Folder, ElPanelInfo Info)>();
+        int totalDefectiveCellsCount = 0;
+
+        foreach (var folder in allFolders)
+        {
+            string infoElPath = System.IO.Path.Combine(folder, "info.el");
+            string folderName = System.IO.Path.GetFileName(folder);
+            var info = _parser.ParseElFile(infoElPath, folderName);
+
+            if (info.IsDefective || info.Defects.Count > 0)
+            {
+                defectiveList.Add((folder, info));
+                totalDefectiveCellsCount += info.Defects.Count;
+            }
+        }
+
+        if (defectiveList.Count == 0)
+        {
+            return View("NoDefectsState");
+        }
+
+        if (panelIndex < 0) panelIndex = 0;
+        if (panelIndex >= defectiveList.Count) panelIndex = defectiveList.Count - 1;
+
+        var currentItem = defectiveList[panelIndex];
+        var existingRecord = _auditStorage.GetRecord(currentItem.Info.FolderName);
+
+        ViewBag.CurrentIndex = panelIndex;
+        ViewBag.TotalDefectivePanels = defectiveList.Count;
+        ViewBag.TotalDefectiveCells = totalDefectiveCellsCount;
+        ViewBag.HasPrevious = panelIndex > 0;
+        ViewBag.HasNext = panelIndex < defectiveList.Count - 1;
+        ViewBag.ExistingRecord = existingRecord;
+
+        return View("DefectivePanels", currentItem.Info);
+    }
+
     [HttpPost]
     public IActionResult SaveDecision([FromBody] AuditSaveRequest request)
     {

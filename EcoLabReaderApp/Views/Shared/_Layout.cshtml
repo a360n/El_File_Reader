@@ -1,107 +1,93 @@
 <!DOCTYPE html>
-<html dir="rtl" lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>EcoLAB EL File Reader & AI Dataset Auditor</title>
-    <!-- Google Fonts Inter & Outfit -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-
+    
     <!-- Bootstrap 5 RTL -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Google Cairo Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --bg-primary: #0f172a;
-            --bg-card: #1e293b;
-            --bg-card-hover: #334155;
-            --accent-green: #10b981;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-green: #22c55e;
             --accent-red: #ef4444;
-            --accent-blue: #3b82f6;
+            --accent-yellow: #f59e0b;
+            --accent-orange: #f97316;
             --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border-color: #334155;
         }
 
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: var(--bg-primary);
+            background-color: var(--bg-dark);
             color: var(--text-main);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
         }
 
         .navbar-custom {
-            background: rgba(30, 41, 59, 0.85);
+            background-color: rgba(30, 41, 59, 0.85);
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border-color);
-            padding: 12px 24px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .card-custom {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
         .btn-custom-green {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
+            background-color: var(--accent-green);
+            color: #fff;
             border: none;
             font-weight: 700;
-            padding: 12px 20px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
         }
+
         .btn-custom-green:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-            color: white;
+            background-color: #16a34a;
+            color: #fff;
         }
 
         .btn-custom-red {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
+            background-color: var(--accent-red);
+            color: #fff;
             border: none;
             font-weight: 700;
-            padding: 12px 20px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
         }
+
         .btn-custom-red:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-            color: white;
+            background-color: #dc2626;
+            color: #fff;
         }
 
         .btn-custom-blue {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
+            background-color: #0284c7;
+            color: #fff;
             border: none;
             font-weight: 700;
-            padding: 12px 20px;
-            border-radius: 12px;
-            transition: all 0.2s ease;
         }
+
         .btn-custom-blue:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
-            color: white;
+            background-color: #0369a1;
+            color: #fff;
         }
 
         .img-container {
-            background: #020617;
-            border-radius: 12px;
-            border: 1px solid var(--border-color);
-            overflow: hidden;
             position: relative;
-            min-height: 280px;
+            width: 100%;
+            height: 380px;
+            background-color: #020617;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -109,72 +95,68 @@
 
         .img-container img {
             max-width: 100%;
-            max-height: 380px;
+            max-height: 100%;
             object-fit: contain;
             transition: transform 0.3s ease;
         }
-        .img-container img:hover {
-            transform: scale(1.02);
-        }
 
-        .badge-status {
-            font-size: 14px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-weight: bold;
+        .img-container img:hover {
+            transform: scale(1.15);
+            cursor: zoom-in;
         }
 
         .badge-pass {
-            background-color: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+            border: 1px solid #22c55e;
         }
 
         .badge-fail {
-            background-color: rgba(239, 68, 68, 0.15);
+            background-color: rgba(239, 68, 68, 0.2);
             color: #f87171;
-            border: 1px solid rgba(239, 68, 68, 0.3);
+            border: 1px solid #ef4444;
         }
 
         .table-custom {
             color: var(--text-main);
+            border-color: rgba(255, 255, 255, 0.1);
         }
+
         .table-custom th {
-            background-color: #020617;
-            color: var(--text-muted);
-            border-bottom: 2px solid var(--border-color);
-            padding: 14px;
+            background-color: #0f172a;
+            color: var(--accent-blue);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.1);
         }
+
         .table-custom td {
-            padding: 14px;
-            border-bottom: 1px solid var(--border-color);
-            vertical-align: middle;
+            background-color: var(--card-bg);
         }
     </style>
+
+    @RenderSection("Styles", required: false)
 </head>
 <body>
-    <header class="navbar-custom d-flex justify-content-between align-items-center mb-4">
-        <div class="d-flex align-items-center gap-3">
-            <i class="fa-solid fa-solar-panel text-primary fs-3"></i>
-            <div>
-                <h5 class="m-0 fw-bold">نظام تدقيق ودراسة ملفات EcoLAB EL</h5>
-                <small class="text-muted">EcoProgetti EL & TIFF AI Dataset Preparation</small>
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-3 text-white fw-bold" href="/Audit/Index">
+                <i class="fa-solid fa-microchip text-info fs-3"></i>
+                <span>قارئ EcoLAB EL وتدقيق بيانات الذكاء الاصطناعي</span>
+            </a>
+
+            <div class="d-flex align-items-center gap-3">
+                <a href="/Audit/DefectivePanels" class="btn btn-outline-danger rounded-3 px-3 fw-bold" title="الانتقال لصفحة الألواح المعيبة فقط (تخطي الألواح السليمة)">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i>الألواح المعيبة فقط
+                </a>
+                @RenderSection("HeaderActions", required: false)
             </div>
         </div>
-        <div>
-            @RenderSection("HeaderActions", required: false)
-        </div>
-    </header>
+    </nav>
 
-    <main class="container-fluid px-4 flex-grow-1">
+    <div class="container-fluid px-4 py-4">
         @RenderBody()
-    </main>
-
-    <footer class="text-center py-3 text-muted border-top border-secondary mt-5 fs-7">
-        EcoLAB EL File Reader & AI Dataset Auditor &copy; 2026 | ECOPROGETTI EL HR Inspection Engine
-    </footer>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    @await RenderSectionAsync("Scripts", required: false)
+    @RenderSection("Scripts", required: false)
 </body>
 </html>
