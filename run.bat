@@ -1,9 +1,9 @@
 @echo off
-title EcoLAB EL File Reader & AI Dataset Auditor Launcher
+title EcoLAB EL File Reader ^& AI Dataset Auditor Launcher
 color 0A
 
 echo ========================================================
-echo   EcoLAB EL File Reader & AI Dataset Auditor Launcher
+echo   EcoLAB EL File Reader ^& AI Dataset Auditor Launcher
 echo ========================================================
 echo.
 
@@ -23,7 +23,7 @@ echo [2/3] Opening browser at http://localhost:5199 ...
 timeout /t 2 /nobreak >nul
 start "" "http://localhost:5199"
 
-echo [3/3] Starting EcoLAB Reader (.NET 8/10 App)...
+echo [3/3] Starting EcoLAB Reader Application...
 echo.
 dotnet run
 
