@@ -83,64 +83,33 @@ public class ElParserService
         result.IsDefective = defects.Count > 0;
         result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
 
-        // 4. Extract Panel Quality Rating from _DENKweitRating or fallback to defect count rating
-        string rating = string.Empty;
+        // 4. Extract Panel Quality Rating directly from .el file (_DENKweitRating or Rating fields)
+        result.Rating = "غير محدد";
         try
         {
-            string doubleTypeIndex = "13";
-            var doubleTypeMatch = Regex.Match(content, @"(?:^|\|)(\d+)\|System\.Double\b");
-            if (doubleTypeMatch.Success)
+            var ratingMatch = Regex.Match(content, @"_DENKweitRating[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
+            if (!ratingMatch.Success)
             {
-                doubleTypeIndex = doubleTypeMatch.Groups[1].Value;
+                ratingMatch = Regex.Match(content, @"\bRating\b[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
             }
 
-            var ratingMatches = Regex.Matches(content, @"_DENKweitRating.*?\|" + doubleTypeIndex + @"\|\|([\d.-]+)");
-            double maxScore = double.MinValue;
-            bool foundRating = false;
-
-            foreach (Match match in ratingMatches)
+            if (ratingMatch.Success && double.TryParse(ratingMatch.Groups[1].Value, out double score))
             {
-                if (double.TryParse(match.Groups[1].Value, out double score))
-                {
-                    if (score > maxScore)
-                    {
-                        maxScore = score;
-                        foundRating = true;
-                    }
-                }
-            }
-
-            if (foundRating)
-            {
-                if (maxScore >= 2.5)
-                    rating = "نجمة كاملة (1 Star)";
-                else if (maxScore >= 1.5)
-                    rating = "ثلثين (2/3 Stars)";
-                else if (maxScore >= 0.5)
-                    rating = "ثلث نجمة (1/3 Star)";
+                if (score >= 2.5)
+                    result.Rating = "نجمة كاملة (1 Star)";
+                else if (score >= 1.5)
+                    result.Rating = "ثلثين (2/3 Stars)";
+                else if (score >= 0.5)
+                    result.Rating = "ثلث نجمة (1/3 Star)";
                 else
-                    rating = "صفر نجمة (0 Stars)";
+                    result.Rating = "صفر نجمة (0 Stars)";
             }
         }
         catch
         {
-            // Fallback
+            result.Rating = "غير محدد";
         }
 
-        // If no explicit _DENKweitRating was found, derive rating from defective cell count
-        if (string.IsNullOrEmpty(rating))
-        {
-            if (defects.Count == 0)
-                rating = "نجمة كاملة (1 Star)";
-            else if (defects.Count <= 2)
-                rating = "ثلثين (2/3 Stars)";
-            else if (defects.Count <= 5)
-                rating = "ثلث نجمة (1/3 Star)";
-            else
-                rating = "صفر نجمة (0 Stars)";
-        }
-
-        result.Rating = rating;
         return result;
     }
 
