@@ -79,6 +79,52 @@ public class ElParserService
             }
         }
 
+        // 4. Extract Panel Quality Rating from _DENKweitRating
+        result.Rating = "غير محدد (Not Rated)";
+        try
+        {
+            string doubleTypeIndex = "13";
+            var doubleTypeMatch = Regex.Match(content, @"(?:^|\|)(\d+)\|System\.Double\b");
+            if (doubleTypeMatch.Success)
+            {
+                doubleTypeIndex = doubleTypeMatch.Groups[1].Value;
+            }
+
+            var ratingMatches = Regex.Matches(content, @"_DENKweitRating.*?\|" + doubleTypeIndex + @"\|\|([\d.-]+)");
+            double maxScore = double.MinValue;
+            bool foundRating = false;
+
+            foreach (Match match in ratingMatches)
+            {
+                if (double.TryParse(match.Groups[1].Value, out double score))
+                {
+                    if (score > maxScore)
+                    {
+                        maxScore = score;
+                        foundRating = true;
+                    }
+                }
+            }
+
+            if (foundRating)
+            {
+                if (maxScore >= 2.5)
+                    result.Rating = "نجمة كاملة (1 Star)";
+                else if (maxScore >= 1.5)
+                    result.Rating = "ثلثين (2/3 Stars)";
+                else if (maxScore >= 0.5)
+                    result.Rating = "ثلث نجمة (1/3 Star)";
+                else if (maxScore > 0.0)
+                    result.Rating = "صفر نجمة (0 Stars)";
+                else
+                    result.Rating = "صفر نجمة (0 Stars)"; // Default to 0 stars if precisely 0.0
+            }
+        }
+        catch
+        {
+            // Fallback
+        }
+
         result.Defects = defects;
         result.IsDefective = defects.Count > 0;
         result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";

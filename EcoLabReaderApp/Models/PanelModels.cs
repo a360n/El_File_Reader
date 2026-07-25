@@ -22,6 +22,7 @@ public class ElPanelInfo
     public List<string> Defects { get; set; } = new();
     public string FolderPath { get; set; } = string.Empty;
     public string FolderName { get; set; } = string.Empty;
+    public string Rating { get; set; } = string.Empty;
 }
 
 public class AuditRecord

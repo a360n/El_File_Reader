@@ -98,22 +98,47 @@
             <h5 class="fw-bold mb-3"><i class="fa-solid fa-circle-info text-primary me-2"></i>المعلومات المقروءة من ملف info.el</h5>
             
             <div class="row g-3">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-muted d-block mb-1">الرقم التسلسلي للوح:</small>
                         <strong class="fs-5 text-warning">@Model.SerialNumber</strong>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-muted d-block mb-1">التاريخ والوقت بالضبط:</small>
                         <strong class="fs-6 text-light">@Model.Timestamp</strong>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-muted d-block mb-1">حالة القارئ EL:</small>
-                        <span class="badge badge-fail fs-6">❌ FAIL (معيب - يحتوي عيوب)</span>
+                        <span class="badge badge-fail fs-6">❌ FAIL (معيب)</span>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-muted d-block mb-1">تقييم اللوح (Rating):</small>
+                        @if (Model.Rating.Contains("1 Star") || Model.Rating.Contains("كاملة"))
+                        {
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐⭐</strong>
+                        }
+                        else if (Model.Rating.Contains("2/3 Stars") || Model.Rating.Contains("ثلثين"))
+                        {
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐☆</strong>
+                        }
+                        else if (Model.Rating.Contains("1/3 Star") || Model.Rating.Contains("ثلث"))
+                        {
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐☆☆</strong>
+                        }
+                        else if (Model.Rating.Contains("0 Stars") || Model.Rating.Contains("صفر"))
+                        {
+                            <strong class="fs-5 text-muted" title="@Model.Rating">☆☆☆</strong>
+                        }
+                        else
+                        {
+                            <strong class="fs-6 text-muted">@Model.Rating</strong>
+                        }
                     </div>
                 </div>
             </div>
