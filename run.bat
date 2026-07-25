@@ -10,12 +10,16 @@ echo.
 :: Navigate to root directory
 cd /d "%~dp0"
 
+echo [0/3] Terminating any previously running instances to unlock files...
+taskkill /F /IM EcoLabReaderApp.exe >nul 2>&1
+
 echo [1/3] Checking for updates from GitHub...
-git pull origin main >nul 2>&1
+git fetch origin main >nul 2>&1
+git reset --hard origin/main >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    echo [OK] Successfully updated from GitHub!
+    echo [OK] Successfully updated to the latest version from GitHub!
 ) else (
-    echo [INFO] Offline mode or no new updates. Proceeding locally...
+    echo [INFO] Offline mode or local environment. Proceeding...
 )
 echo.
 
