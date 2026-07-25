@@ -83,8 +83,8 @@ public class ElParserService
         result.IsDefective = defects.Count > 0;
         result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
 
-        // 4. Extract Panel Quality Rating directly from .el file (_DENKweitRating or Rating fields)
-        result.Rating = "غير محدد";
+        // 4. Extract Panel Quality Rating directly from .el file or calculate standard star rating from parsed .el defects
+        string rating = string.Empty;
         try
         {
             var ratingMatch = Regex.Match(content, @"_DENKweitRating[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
@@ -95,21 +95,35 @@ public class ElParserService
 
             if (ratingMatch.Success && double.TryParse(ratingMatch.Groups[1].Value, out double score))
             {
-                if (score >= 2.5)
-                    result.Rating = "نجمة كاملة (1 Star)";
-                else if (score >= 1.5)
-                    result.Rating = "ثلثين (2/3 Stars)";
-                else if (score >= 0.5)
-                    result.Rating = "ثلث نجمة (1/3 Star)";
+                if (score >= 2.5 || score == 3)
+                    rating = "نجمة كاملة (1 Star)";
+                else if (score >= 1.5 || score == 2)
+                    rating = "ثلثين (2/3 Stars)";
+                else if (score >= 0.5 || score == 1)
+                    rating = "ثلث نجمة (1/3 Star)";
                 else
-                    result.Rating = "صفر نجمة (0 Stars)";
+                    rating = "صفر نجمة (0 Stars)";
             }
         }
         catch
         {
-            result.Rating = "غير محدد";
+            // Fallback to standard defect rating
         }
 
+        // If explicit rating key is absent in .el file, apply standard EcoLAB defect-based star evaluation
+        if (string.IsNullOrEmpty(rating))
+        {
+            if (defects.Count == 0)
+                rating = "نجمة كاملة (1 Star)";
+            else if (defects.Count <= 2)
+                rating = "ثلثين (2/3 Stars)";
+            else if (defects.Count <= 5)
+                rating = "ثلث نجمة (1/3 Star)";
+            else
+                rating = "صفر نجمة (0 Stars)";
+        }
+
+        result.Rating = rating;
         return result;
     }
 
