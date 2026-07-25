@@ -121,23 +121,23 @@
                         <small class="text-muted d-block mb-1">تقييم اللوح (Rating):</small>
                         @if (Model.Rating.Contains("1 Star") || Model.Rating.Contains("كاملة"))
                         {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐⭐</strong>
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐⭐ <span class="fs-6 text-light">(كاملة)</span></strong>
                         }
                         else if (Model.Rating.Contains("2/3 Stars") || Model.Rating.Contains("ثلثين"))
                         {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐☆</strong>
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐☆ <span class="fs-6 text-light">(ثلثين)</span></strong>
                         }
                         else if (Model.Rating.Contains("1/3 Star") || Model.Rating.Contains("ثلث"))
                         {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐☆☆</strong>
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐☆☆ <span class="fs-6 text-light">(ثلث)</span></strong>
                         }
                         else if (Model.Rating.Contains("0 Stars") || Model.Rating.Contains("صفر"))
                         {
-                            <strong class="fs-5 text-muted" title="@Model.Rating">☆☆☆</strong>
+                            <strong class="fs-5 text-secondary" title="@Model.Rating">☆☆☆ <span class="fs-6 text-light">(صفر)</span></strong>
                         }
                         else
                         {
-                            <strong class="fs-6 text-muted">@Model.Rating</strong>
+                            <span class="badge bg-secondary text-white fs-6">@Model.Rating</span>
                         }
                     </div>
                 </div>

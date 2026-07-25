@@ -79,8 +79,12 @@ public class ElParserService
             }
         }
 
-        // 4. Extract Panel Quality Rating from _DENKweitRating
-        result.Rating = "غير محدد (Not Rated)";
+        result.Defects = defects;
+        result.IsDefective = defects.Count > 0;
+        result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
+
+        // 4. Extract Panel Quality Rating from _DENKweitRating or fallback to defect count rating
+        string rating = string.Empty;
         try
         {
             string doubleTypeIndex = "13";
@@ -109,15 +113,13 @@ public class ElParserService
             if (foundRating)
             {
                 if (maxScore >= 2.5)
-                    result.Rating = "نجمة كاملة (1 Star)";
+                    rating = "نجمة كاملة (1 Star)";
                 else if (maxScore >= 1.5)
-                    result.Rating = "ثلثين (2/3 Stars)";
+                    rating = "ثلثين (2/3 Stars)";
                 else if (maxScore >= 0.5)
-                    result.Rating = "ثلث نجمة (1/3 Star)";
-                else if (maxScore > 0.0)
-                    result.Rating = "صفر نجمة (0 Stars)";
+                    rating = "ثلث نجمة (1/3 Star)";
                 else
-                    result.Rating = "صفر نجمة (0 Stars)"; // Default to 0 stars if precisely 0.0
+                    rating = "صفر نجمة (0 Stars)";
             }
         }
         catch
@@ -125,10 +127,20 @@ public class ElParserService
             // Fallback
         }
 
-        result.Defects = defects;
-        result.IsDefective = defects.Count > 0;
-        result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
+        // If no explicit _DENKweitRating was found, derive rating from defective cell count
+        if (string.IsNullOrEmpty(rating))
+        {
+            if (defects.Count == 0)
+                rating = "نجمة كاملة (1 Star)";
+            else if (defects.Count <= 2)
+                rating = "ثلثين (2/3 Stars)";
+            else if (defects.Count <= 5)
+                rating = "ثلث نجمة (1/3 Star)";
+            else
+                rating = "صفر نجمة (0 Stars)";
+        }
 
+        result.Rating = rating;
         return result;
     }
 
