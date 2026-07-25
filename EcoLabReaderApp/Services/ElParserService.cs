@@ -123,7 +123,16 @@ public class ElParserService
                 rating = "صفر نجمة (0 Stars)";
         }
 
+        // A panel is defective if it has marked cell defects OR if it has a low rating (< 1 Full Star)
+        bool hasLowRating = !string.IsNullOrEmpty(rating) &&
+                            !rating.Contains("1 Star") &&
+                            !rating.Contains("كاملة");
+
         result.Rating = rating;
+        result.Defects = defects;
+        result.IsDefective = defects.Count > 0 || hasLowRating;
+        result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
+
         return result;
     }
 
