@@ -275,11 +275,11 @@ def run_pipeline(restructured_path, aicell_path):
             if os.path.isdir(p) and item != "all_good_cells":
                 res = process_panel_folder(p, is_good_model=True, restructured_base=restructured_path, aicell_base=aicell_path)
                 results.append(res)
-                # Copy entire panel folder to AICell/Good_models/
+                # Move entire panel folder to AICell/Good_models/
                 dest_p = os.path.join(aicell_good_models, item)
                 if os.path.exists(dest_p):
                     shutil.rmtree(dest_p)
-                shutil.copytree(p, dest_p)
+                shutil.move(p, dest_p)
 
     # Process Bad Models
     if os.path.exists(bad_models_dir):
@@ -288,11 +288,11 @@ def run_pipeline(restructured_path, aicell_path):
             if os.path.isdir(p) and item != "all_bad_cells":
                 res = process_panel_folder(p, is_good_model=False, restructured_base=restructured_path, aicell_base=aicell_path)
                 results.append(res)
-                # Copy entire panel folder to AICell/bad_models/
+                # Move entire panel folder to AICell/bad_models/
                 dest_p = os.path.join(aicell_bad_models, item)
                 if os.path.exists(dest_p):
                     shutil.rmtree(dest_p)
-                shutil.copytree(p, dest_p)
+                shutil.move(p, dest_p)
 
     total_good = sum(r.get("good_cells", 0) for r in results if r.get("status") == "success")
     total_bad = sum(r.get("bad_cells", 0) for r in results if r.get("status") == "success")
