@@ -121,58 +121,54 @@
         </div>
     </div>
 
-    <!-- Right Sidebar: Decision Controls -->
+    <!-- Right Sidebar: 3 Decision Controls & Keyboard Shortcuts -->
     <div class="col-lg-4">
         <div class="card-custom p-4 position-sticky" style="top: 90px;">
             <h5 class="fw-bold mb-4 border-bottom border-secondary pb-3 text-success">
-                <i class="fa-solid fa-clipboard-check me-2"></i>قرار التدقيق للوح السليم
+                <i class="fa-solid fa-clipboard-check me-2"></i>قرار الإقرار والتدقيق للوح السليم
             </h5>
 
-            <!-- Current Selection Status -->
-            <div id="selectionStatusAlert" class="alert alert-secondary text-center mb-4 rounded-3">
-                @if (existingRecord != null)
+            <!-- 3 Clean Decision Action Buttons -->
+            <div class="d-grid gap-3 mb-4">
+                <!-- Action 1: No Problem / Keep Panel (Shortcut A) -->
+                @if (hasNext)
                 {
-                    if (existingRecord.IsMatched)
-                    {
-                        <span class="text-success fw-bold"><i class="fa-solid fa-check-double me-1"></i>تم القرار سابقاً: مطابق</span>
-                    }
-                    else
-                    {
-                        <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i>تم القرار سابقاً: غير مطابق</span>
-                    }
+                    <a href="/Audit/GoodPanels?panelIndex=@(currentIndex + 1)" id="btnKeep" class="btn btn-success btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow">
+                        <i class="fa-solid fa-circle-check fs-4"></i>
+                        <span>لا توجد مشكلة (إبقاء - A)</span>
+                    </a>
                 }
                 else
                 {
-                    <span>يرجى اختيار أحد القرارات أدناه:</span>
+                    <a href="/Audit/GoodPanels" id="btnKeep" class="btn btn-success btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow">
+                        <i class="fa-solid fa-circle-check fs-4"></i>
+                        <span>لا توجد مشكلة (إبقاء - A)</span>
+                    </a>
                 }
-            </div>
 
-            <!-- Action Buttons -->
-            <div class="d-grid gap-3 mb-4">
-                <button type="button" class="btn btn-custom-green btn-lg d-flex align-items-center justify-content-center gap-2" id="btnMatch">
-                    <i class="fa-solid fa-circle-check fs-4"></i>
-                    <span>معلومات info مطابقة لل marked</span>
-                </button>
-
-                <button type="button" class="btn btn-custom-red btn-lg d-flex align-items-center justify-content-center gap-2" id="btnMismatch">
-                    <i class="fa-solid fa-circle-xmark fs-4"></i>
-                    <span>معلومات info غير مطابقة لل marked</span>
-                </button>
-
-                <!-- Re-evaluation Button -->
-                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnReEvaluation" title="قص ونقل هذا اللوح بملفاته إلى مجلد Re_evaluation لمراجعته لاحقاً">
+                <!-- Action 2: Re-evaluation (Shortcut R) -->
+                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow" id="btnReEvaluation" title="قص ونقل هذا اللوح بملفاته إلى مجلد Re_evaluation لمراجعته لاحقاً">
                     <i class="fa-solid fa-folder-arrow-up fs-4"></i>
-                    <span>إعادة التقييم (Re_evaluation)</span>
+                    <span>إعادة التقييم (Re_evaluation - R)</span>
                 </button>
 
-                <!-- Move to Useless Button -->
-                <button type="button" class="btn btn-dark border border-secondary text-light btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnMoveUseless" title="قص ونقل هذا اللوح بملفاته فوراً إلى مجلد Useless للتخلص منه">
+                <!-- Action 3: Damaged / Useless (Shortcut U) -->
+                <button type="button" class="btn btn-dark border border-secondary text-light btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow" id="btnMoveUseless" title="قص ونقل هذا اللوح بملفاته فوراً إلى مجلد Useless للتخلص منه">
                     <i class="fa-solid fa-trash-can text-danger fs-4"></i>
-                    <span>ألواح تالفة (Useless)</span>
+                    <span>ألواح تالفة (Useless - U)</span>
                 </button>
             </div>
 
-            <!-- Toast alert message -->
+            <!-- Keyboard Shortcuts Legend Box -->
+            <div class="p-3 rounded-3 bg-dark border border-secondary text-center mb-2">
+                <small class="text-light fw-bold d-block mb-2"><i class="fa-solid fa-keyboard me-1 text-info"></i>اختصارات لوحة المفاتيح المباشرة:</small>
+                <div class="d-flex justify-content-around">
+                    <span class="badge bg-success fs-6"><kbd>A</kbd> إبقاء وتالي</span>
+                    <span class="badge bg-warning text-dark fs-6"><kbd>R</kbd> إعادة التقييم</span>
+                    <span class="badge bg-danger fs-6"><kbd>U</kbd> تالف Useless</span>
+                </div>
+            </div>
+
             <div id="toastAlert" class="alert d-none text-center rounded-3 p-3 mt-3"></div>
         </div>
     </div>
@@ -181,73 +177,83 @@
 @section Scripts {
     <script>
         const folderName = "@Model.FolderName";
-        const panelId = "@Model.PanelId";
+        const currentIndex = @currentIndex;
 
-        document.getElementById('btnMatch').addEventListener('click', function () {
-            saveDecision(true, []);
-        });
+        const btnReEvaluation = document.getElementById('btnReEvaluation');
+        const btnMoveUseless = document.getElementById('btnMoveUseless');
 
-        document.getElementById('btnMismatch').addEventListener('click', function () {
-            saveDecision(false, ["غير مطابق للوحة الـ marked"]);
-        });
+        // Re-evaluation Handler (Shortcut R)
+        btnReEvaluation.addEventListener('click', async () => {
+            btnReEvaluation.disabled = true;
+            btnReEvaluation.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
 
-        document.getElementById('btnReEvaluation').addEventListener('click', function () {
-            moveToFolder('/Audit/MoveToReEvaluation', 'Re_evaluation');
-        });
+            try {
+                const response = await fetch('/Audit/MoveToReEvaluation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
 
-        document.getElementById('btnMoveUseless').addEventListener('click', function () {
-            moveToFolder('/Audit/MoveToUseless', 'Useless');
-        });
-
-        function saveDecision(isMatched, humanCorrections) {
-            fetch('/Audit/SaveDecision', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    FolderName: folderName,
-                    PanelId: panelId,
-                    IsMatched: isMatched,
-                    HumanCorrections: humanCorrections
-                })
-            })
-            .then(res => res.json())
-            .then(data => {
-                const toast = document.getElementById('toastAlert');
-                toast.classList.remove('d-none', 'alert-danger', 'alert-success');
-                if (data.success) {
-                    toast.classList.add('alert-success');
-                    toast.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i>' + data.message;
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1200);
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/GoodPanels?panelIndex=${currentIndex}`;
                 } else {
-                    toast.classList.add('alert-danger');
-                    toast.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>' + data.message;
+                    alert('خطأ أثناء النقل: ' + res.message);
+                    btnReEvaluation.disabled = false;
+                    btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (Re_evaluation - R)</span>';
                 }
-            });
-        }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnReEvaluation.disabled = false;
+                btnReEvaluation.innerHTML = '<i class="fa-solid fa-folder-arrow-up fs-4"></i><span>إعادة التقييم (Re_evaluation - R)</span>';
+            }
+        });
 
-        function moveToFolder(endpoint, folderLabel) {
-            fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ FolderName: folderName })
-            })
-            .then(res => res.json())
-            .then(data => {
-                const toast = document.getElementById('toastAlert');
-                toast.classList.remove('d-none', 'alert-danger', 'alert-success');
-                if (data.success) {
-                    toast.classList.add('alert-success');
-                    toast.innerHTML = '<i class="fa-solid fa-check-circle me-1"></i>' + data.message;
-                    setTimeout(() => {
-                        window.location.href = '/Audit/GoodPanels?panelIndex=@currentIndex';
-                    }, 1000);
+        // Useless Handler (Shortcut U)
+        btnMoveUseless.addEventListener('click', async () => {
+            btnMoveUseless.disabled = true;
+            btnMoveUseless.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري النقل...';
+
+            try {
+                const response = await fetch('/Audit/MoveToUseless', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/GoodPanels?panelIndex=${currentIndex}`;
                 } else {
-                    toast.classList.add('alert-danger');
-                    toast.innerHTML = '<i class="fa-solid fa-triangle-exclamation me-1"></i>' + data.message;
+                    alert('خطأ أثناء النقل: ' + res.message);
+                    btnMoveUseless.disabled = false;
+                    btnMoveUseless.innerHTML = '<i class="fa-solid fa-trash-can text-danger fs-4"></i><span>ألواح تالفة (Useless - U)</span>';
                 }
-            });
-        }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnMoveUseless.disabled = false;
+                btnMoveUseless.innerHTML = '<i class="fa-solid fa-trash-can text-danger fs-4"></i><span>ألواح تالفة (Useless - U)</span>';
+            }
+        });
+
+        // Fast Keyboard Shortcuts (R = Re_evaluation, U = Useless, A = Keep / Next Panel)
+        document.addEventListener('keydown', function (e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'r') {
+                e.preventDefault();
+                btnReEvaluation?.click();
+            } else if (key === 'u') {
+                e.preventDefault();
+                btnMoveUseless?.click();
+            } else if (key === 'a') {
+                e.preventDefault();
+                const keepBtn = document.getElementById('btnKeep');
+                if (keepBtn) {
+                    window.location.href = keepBtn.getAttribute('href');
+                }
+            }
+        });
     </script>
 }

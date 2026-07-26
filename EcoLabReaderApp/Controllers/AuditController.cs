@@ -210,15 +210,6 @@ public class AuditController : Controller
         }
     }
 
-    public IActionResult Log()
-    {
-        var records = _auditStorage.GetAllRecords();
-        var summary = _auditStorage.GetSummary();
-
-        ViewBag.Summary = summary;
-        return View(records);
-    }
-
     [HttpGet]
     public IActionResult Image(string folderName, string type)
     {
@@ -236,16 +227,6 @@ public class AuditController : Controller
         if (imageBytes == null) return NotFound();
 
         return this.File(imageBytes, contentType);
-    }
-
-    [HttpGet]
-    public IActionResult ExportPdf()
-    {
-        var records = _auditStorage.GetAllRecords();
-        var summary = _auditStorage.GetSummary();
-
-        byte[] pdfContent = _pdfService.GenerateAuditReportPdf(records, summary);
-        return this.File(pdfContent, "text/html", "EL_Audit_Report.html");
     }
 
     [HttpPost]
