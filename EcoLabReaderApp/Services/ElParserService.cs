@@ -83,14 +83,14 @@ public class ElParserService
         result.IsDefective = defects.Count > 0;
         result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
 
-        // 4. Extract Panel Quality Rating directly from .el file or calculate standard star rating from parsed .el defects
-        string rating = string.Empty;
+        // 4. Extract Panel Quality Rating strictly from .el file fields (_DENKweitRating, Rating, ELScore)
+        string rating = "غير محدد (لم يُسجل بالملف)";
         try
         {
             var ratingMatch = Regex.Match(content, @"_DENKweitRating[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
             if (!ratingMatch.Success)
             {
-                ratingMatch = Regex.Match(content, @"\bRating\b[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
+                ratingMatch = Regex.Match(content, @"\b(?:Rating|ELScore|ImageQualityScore)\b[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
             }
 
             if (ratingMatch.Success && double.TryParse(ratingMatch.Groups[1].Value, out double score))
@@ -107,26 +107,11 @@ public class ElParserService
         }
         catch
         {
-            // Fallback to standard defect rating
-        }
-
-        // If explicit rating key is absent in .el file, apply EcoLAB standard letter grade evaluation A, B, C, D
-        if (string.IsNullOrEmpty(rating))
-        {
-            if (defects.Count == 0)
-                rating = "درجة A (نجمة كاملة - 1 Star)";
-            else if (defects.Count <= 2)
-                rating = "درجة B (ثلثين - 2/3 Stars)";
-            else if (defects.Count <= 5)
-                rating = "درجة C (ثلث نجمة - 1/3 Star)";
-            else
-                rating = "درجة D (صفر نجمة - 0 Stars)";
+            rating = "غير محدد (لم يُسجل بالملف)";
         }
 
         // A panel is defective if it has marked cell defects OR if it has a low rating (< 1 Full Star)
-        bool hasLowRating = !string.IsNullOrEmpty(rating) &&
-                            !rating.Contains("1 Star") &&
-                            !rating.Contains("كاملة");
+        bool hasLowRating = rating.Contains("درجة B") || rating.Contains("درجة C") || rating.Contains("درجة D");
 
         result.Rating = rating;
         result.Defects = defects;
