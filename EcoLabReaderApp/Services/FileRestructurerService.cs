@@ -7,6 +7,8 @@ public class FileRestructurerService
 {
     private readonly string _containerPath;
     private readonly string _restructuredPath;
+    private readonly string _goodModelsPath;
+    private readonly string _badModelsPath;
     private readonly string _reEvaluationPath;
     private readonly string _uselessPath;
 
@@ -34,11 +36,16 @@ public class FileRestructurerService
             _uselessPath = candidateUseless;
         }
 
+        _goodModelsPath = Path.Combine(_restructuredPath, "Good_models");
+        _badModelsPath = Path.Combine(_restructuredPath, "bad_models");
+
         EnsureDirectoriesExist();
     }
 
     public string ContainerPath => _containerPath;
     public string RestructuredPath => _restructuredPath;
+    public string GoodModelsPath => _goodModelsPath;
+    public string BadModelsPath => _badModelsPath;
     public string ReEvaluationPath => _reEvaluationPath;
     public string UselessPath => _uselessPath;
 
@@ -52,6 +59,14 @@ public class FileRestructurerService
         {
             Directory.CreateDirectory(_restructuredPath);
         }
+        if (!Directory.Exists(_goodModelsPath))
+        {
+            Directory.CreateDirectory(_goodModelsPath);
+        }
+        if (!Directory.Exists(_badModelsPath))
+        {
+            Directory.CreateDirectory(_badModelsPath);
+        }
         if (!Directory.Exists(_reEvaluationPath))
         {
             Directory.CreateDirectory(_reEvaluationPath);
@@ -62,13 +77,29 @@ public class FileRestructurerService
         }
     }
 
+    public string? FindPanelFolderPath(string folderName)
+    {
+        if (string.IsNullOrEmpty(folderName)) return null;
+
+        string direct = Path.Combine(_restructuredPath, folderName);
+        if (Directory.Exists(direct)) return direct;
+
+        string good = Path.Combine(_goodModelsPath, folderName);
+        if (Directory.Exists(good)) return good;
+
+        string bad = Path.Combine(_badModelsPath, folderName);
+        if (Directory.Exists(bad)) return bad;
+
+        return null;
+    }
+
     public bool MoveToReEvaluation(string folderName)
     {
         EnsureDirectoriesExist();
-        string source = Path.Combine(_restructuredPath, folderName);
-        string target = Path.Combine(_reEvaluationPath, folderName);
+        string? source = FindPanelFolderPath(folderName);
+        if (source == null || !Directory.Exists(source)) return false;
 
-        if (!Directory.Exists(source)) return false;
+        string target = Path.Combine(_reEvaluationPath, folderName);
 
         try
         {
@@ -99,10 +130,10 @@ public class FileRestructurerService
     public bool MoveToUseless(string folderName)
     {
         EnsureDirectoriesExist();
-        string source = Path.Combine(_restructuredPath, folderName);
-        string target = Path.Combine(_uselessPath, folderName);
+        string? source = FindPanelFolderPath(folderName);
+        if (source == null || !Directory.Exists(source)) return false;
 
-        if (!Directory.Exists(source)) return false;
+        string target = Path.Combine(_uselessPath, folderName);
 
         try
         {
@@ -127,6 +158,94 @@ public class FileRestructurerService
             {
                 return false;
             }
+        }
+    }
+
+    public int RunFullRestructuringAndPartitioning(ElParserService parser)
+    {
+        // Step 1: Process & restructure any raw triplets from container/ into Restructured/
+        int organizedCount = RunRestructuring();
+
+        // Step 2: Ensure Good_models and bad_models exist inside Restructured/
+        EnsureDirectoriesExist();
+
+        // Step 3: Scan all panel folders inside Restructured/ (root, Good_models, bad_models)
+        var allFolderPaths = new List<string>();
+
+        // Root Restructured/ folders (excluding reserved folders)
+        foreach (var dir in Directory.GetDirectories(_restructuredPath))
+        {
+            string name = Path.GetFileName(dir);
+            if (name.Equals("Good_models", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("bad_models", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Re_evaluation", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Useless", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            allFolderPaths.Add(dir);
+        }
+
+        // Also check if any existing folders inside Good_models or bad_models need checking
+        if (Directory.Exists(_goodModelsPath))
+        {
+            foreach (var dir in Directory.GetDirectories(_goodModelsPath))
+            {
+                allFolderPaths.Add(dir);
+            }
+        }
+
+        if (Directory.Exists(_badModelsPath))
+        {
+            foreach (var dir in Directory.GetDirectories(_badModelsPath))
+            {
+                allFolderPaths.Add(dir);
+            }
+        }
+
+        // Distribute / Partition panel folders based on info.el defect analysis
+        foreach (var panelFolder in allFolderPaths)
+        {
+            string infoElPath = Path.Combine(panelFolder, "info.el");
+            if (!File.Exists(infoElPath)) continue;
+
+            string folderName = Path.GetFileName(panelFolder);
+            var info = parser.ParseElFile(infoElPath, folderName);
+
+            string targetParentDir = (info.IsDefective || info.Defects.Count > 0) ? _badModelsPath : _goodModelsPath;
+            string targetPath = Path.Combine(targetParentDir, folderName);
+
+            // Move only if not already in the target path
+            if (!Path.GetFullPath(panelFolder).Equals(Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
+            {
+                SafeMoveDirectory(panelFolder, targetPath);
+            }
+        }
+
+        return organizedCount;
+    }
+
+    private void SafeMoveDirectory(string sourceDir, string targetDir)
+    {
+        if (!Directory.Exists(sourceDir)) return;
+        if (Path.GetFullPath(sourceDir).Equals(Path.GetFullPath(targetDir), StringComparison.OrdinalIgnoreCase)) return;
+
+        try
+        {
+            if (Directory.Exists(targetDir))
+            {
+                Directory.Delete(targetDir, true);
+            }
+            Directory.Move(sourceDir, targetDir);
+        }
+        catch
+        {
+            try
+            {
+                CopyDirectory(sourceDir, targetDir);
+                Directory.Delete(sourceDir, true);
+            }
+            catch { }
         }
     }
 

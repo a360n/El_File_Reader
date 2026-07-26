@@ -28,8 +28,8 @@ public class AuditController : Controller
 
     public IActionResult Index(int panelIndex = 0)
     {
-        // Check container & run restructuring if needed
-        _restructurer.RunRestructuring();
+        // Run container restructuring + automatic model partitioning into Good_models & bad_models
+        _restructurer.RunFullRestructuringAndPartitioning(_parser);
 
         var folders = GetRestructuredFolders();
 
@@ -61,7 +61,7 @@ public class AuditController : Controller
 
     public IActionResult DefectivePanels(int panelIndex = 0)
     {
-        _restructurer.RunRestructuring();
+        _restructurer.RunFullRestructuringAndPartitioning(_parser);
         var allFolders = GetRestructuredFolders();
 
         var defectiveList = new List<(string Folder, ElPanelInfo Info)>();
@@ -109,7 +109,7 @@ public class AuditController : Controller
             return BadRequest(new { success = false, message = "FolderName is required" });
         }
 
-        string folderPath = System.IO.Path.Combine(_restructurer.RestructuredPath, request.FolderName);
+        string folderPath = _restructurer.FindPanelFolderPath(request.FolderName) ?? System.IO.Path.Combine(_restructurer.RestructuredPath, request.FolderName);
         string infoElPath = System.IO.Path.Combine(folderPath, "info.el");
 
         var elInfo = _parser.ParseElFile(infoElPath, request.FolderName);
@@ -170,8 +170,6 @@ public class AuditController : Controller
         }
     }
 
-
-
     public IActionResult Log()
     {
         var records = _auditStorage.GetAllRecords();
@@ -187,7 +185,10 @@ public class AuditController : Controller
         if (string.IsNullOrEmpty(folderName)) return NotFound();
 
         string fileName = type?.ToLower() == "marked" ? "marked.tif" : "row.tif";
-        string tiffPath = System.IO.Path.Combine(_restructurer.RestructuredPath, folderName, fileName);
+        string? folderPath = _restructurer.FindPanelFolderPath(folderName);
+        if (folderPath == null) return NotFound();
+
+        string tiffPath = System.IO.Path.Combine(folderPath, fileName);
 
         if (!System.IO.File.Exists(tiffPath)) return NotFound();
 
@@ -210,8 +211,8 @@ public class AuditController : Controller
     [HttpPost]
     public IActionResult TriggerRestructure()
     {
-        int count = _restructurer.RunRestructuring();
-        return Json(new { success = true, count, message = $"تم إعادة هيكلة وفرز {count} ألواح بنجاح" });
+        int count = _restructurer.RunFullRestructuringAndPartitioning(_parser);
+        return Json(new { success = true, count, message = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح" });
     }
 
     private List<string> GetRestructuredFolders()
@@ -219,8 +220,52 @@ public class AuditController : Controller
         string path = _restructurer.RestructuredPath;
         if (!System.IO.Directory.Exists(path)) return new List<string>();
 
-        return System.IO.Directory.GetDirectories(path)
-                        .OrderBy(d => System.IO.Path.GetFileName(d))
-                        .ToList();
+        var result = new List<string>();
+
+        // 1. Direct subdirectories in Restructured/
+        foreach (var dir in System.IO.Directory.GetDirectories(path))
+        {
+            string name = System.IO.Path.GetFileName(dir);
+            if (name.Equals("Good_models", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("bad_models", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Re_evaluation", StringComparison.OrdinalIgnoreCase) ||
+                name.Equals("Useless", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (System.IO.File.Exists(System.IO.Path.Combine(dir, "info.el")))
+            {
+                result.Add(dir);
+            }
+        }
+
+        // 2. Subdirectories in Restructured/Good_models/
+        string goodPath = _restructurer.GoodModelsPath;
+        if (System.IO.Directory.Exists(goodPath))
+        {
+            foreach (var dir in System.IO.Directory.GetDirectories(goodPath))
+            {
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "info.el")))
+                {
+                    result.Add(dir);
+                }
+            }
+        }
+
+        // 3. Subdirectories in Restructured/bad_models/
+        string badPath = _restructurer.BadModelsPath;
+        if (System.IO.Directory.Exists(badPath))
+        {
+            foreach (var dir in System.IO.Directory.GetDirectories(badPath))
+            {
+                if (System.IO.File.Exists(System.IO.Path.Combine(dir, "info.el")))
+                {
+                    result.Add(dir);
+                }
+            }
+        }
+
+        return result.OrderBy(d => System.IO.Path.GetFileName(d)).ToList();
     }
 }
