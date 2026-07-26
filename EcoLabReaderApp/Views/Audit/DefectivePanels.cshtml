@@ -119,21 +119,21 @@
                 <div class="col-md-3">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-muted d-block mb-1">تقييم اللوح (Rating):</small>
-                        @if (Model.Rating.Contains("1 Star") || Model.Rating.Contains("كاملة"))
+                        @if (Model.Rating.Contains("درجة A") || Model.Rating.Contains("1 Star") || Model.Rating.Contains("كاملة"))
                         {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐⭐ <span class="fs-6 text-light">(كاملة)</span></strong>
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐⭐ <span class="fs-6 text-light">(درجة A)</span></strong>
                         }
-                        else if (Model.Rating.Contains("2/3 Stars") || Model.Rating.Contains("ثلثين"))
+                        else if (Model.Rating.Contains("درجة B") || Model.Rating.Contains("2/3 Stars") || Model.Rating.Contains("ثلثين"))
                         {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐☆ <span class="fs-6 text-light">(ثلثين)</span></strong>
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐☆ <span class="fs-6 text-light">(درجة B)</span></strong>
                         }
-                        else if (Model.Rating.Contains("1/3 Star") || Model.Rating.Contains("ثلث"))
+                        else if (Model.Rating.Contains("درجة C") || Model.Rating.Contains("1/3 Star") || Model.Rating.Contains("ثلث"))
                         {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐☆☆ <span class="fs-6 text-light">(ثلث)</span></strong>
+                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐☆☆ <span class="fs-6 text-light">(درجة C)</span></strong>
                         }
-                        else if (Model.Rating.Contains("0 Stars") || Model.Rating.Contains("صفر"))
+                        else if (Model.Rating.Contains("درجة D") || Model.Rating.Contains("0 Stars") || Model.Rating.Contains("صفر"))
                         {
-                            <strong class="fs-5 text-secondary" title="@Model.Rating">☆☆☆ <span class="fs-6 text-light">(صفر)</span></strong>
+                            <strong class="fs-5 text-secondary" title="@Model.Rating">☆☆☆ <span class="fs-6 text-light">(درجة D)</span></strong>
                         }
                         else
                         {

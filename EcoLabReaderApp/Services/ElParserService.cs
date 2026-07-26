@@ -96,13 +96,13 @@ public class ElParserService
             if (ratingMatch.Success && double.TryParse(ratingMatch.Groups[1].Value, out double score))
             {
                 if (score >= 2.5 || score == 3)
-                    rating = "نجمة كاملة (1 Star)";
+                    rating = "درجة A (نجمة كاملة - 1 Star)";
                 else if (score >= 1.5 || score == 2)
-                    rating = "ثلثين (2/3 Stars)";
+                    rating = "درجة B (ثلثين - 2/3 Stars)";
                 else if (score >= 0.5 || score == 1)
-                    rating = "ثلث نجمة (1/3 Star)";
+                    rating = "درجة C (ثلث نجمة - 1/3 Star)";
                 else
-                    rating = "صفر نجمة (0 Stars)";
+                    rating = "درجة D (صفر نجمة - 0 Stars)";
             }
         }
         catch
@@ -110,17 +110,17 @@ public class ElParserService
             // Fallback to standard defect rating
         }
 
-        // If explicit rating key is absent in .el file, apply standard EcoLAB defect-based star evaluation
+        // If explicit rating key is absent in .el file, apply EcoLAB standard letter grade evaluation A, B, C, D
         if (string.IsNullOrEmpty(rating))
         {
             if (defects.Count == 0)
-                rating = "نجمة كاملة (1 Star)";
+                rating = "درجة A (نجمة كاملة - 1 Star)";
             else if (defects.Count <= 2)
-                rating = "ثلثين (2/3 Stars)";
+                rating = "درجة B (ثلثين - 2/3 Stars)";
             else if (defects.Count <= 5)
-                rating = "ثلث نجمة (1/3 Star)";
+                rating = "درجة C (ثلث نجمة - 1/3 Star)";
             else
-                rating = "صفر نجمة (0 Stars)";
+                rating = "درجة D (صفر نجمة - 0 Stars)";
         }
 
         // A panel is defective if it has marked cell defects OR if it has a low rating (< 1 Full Star)
