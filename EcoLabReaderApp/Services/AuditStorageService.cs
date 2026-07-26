@@ -94,8 +94,12 @@ public class AuditStorageService
     {
         try
         {
+            string dir = Path.GetDirectoryName(_logFilePath)!;
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
             string json = JsonSerializer.Serialize(_records, new JsonSerializerOptions { WriteIndented = true });
-            File.ReadAllText(_logFilePath); // Read test
             File.WriteAllText(_logFilePath, json);
         }
         catch (Exception ex)
