@@ -12,12 +12,21 @@ Performs:
 
 import os
 import sys
+import io
 import glob
 import json
 import shutil
 import re
 import cv2
 import numpy as np
+
+# Force UTF-8 encoding on sys.stdout and sys.stderr for Windows compatibility
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 def parse_info_el_defects(info_el_path):
     """
@@ -318,4 +327,4 @@ if __name__ == "__main__":
         aicell = sys.argv[2]
 
     summary = run_pipeline(restructured, aicell)
-    print(json.dumps(summary, ensure_ascii=False, indent=2))
+    print(json.dumps(summary, ensure_ascii=True, indent=2))
