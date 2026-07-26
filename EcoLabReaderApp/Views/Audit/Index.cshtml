@@ -43,21 +43,21 @@
         <div class="card-custom p-4 mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold m-0"><i class="fa-solid fa-images text-info me-2"></i>معاينة صور اللوح الشمسي</h5>
-                <span class="text-light">مجلد اللوح: <code>@Model.FolderName</code></span>
+                <span class="badge bg-secondary">مجلد: @Model.FolderName</span>
             </div>
 
-            <!-- Image Viewer Container -->
+            <!-- Two Images Side by Side -->
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="img-container">
-                        <span class="img-label">الصورة الخام (row.tif)</span>
-                        <img src="/Audit/Image?folderName=@Model.FolderName&type=row" alt="Row Image" id="imgRow" class="img-fluid" />
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark opacity-75">row.tif (الصورة الخام)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName&type=row" alt="Raw Tiff Image" id="imgRaw" />
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="img-container">
-                        <span class="img-label">الصورة المؤشرة (marked.tif)</span>
-                        <img src="/Audit/Image?folderName=@Model.FolderName&type=marked" alt="Marked Image" id="imgMarked" class="img-fluid" />
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-danger opacity-75">marked.tif (المؤشرة بالعيوب)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName&type=marked" alt="Marked Tiff Image" id="imgMarked" />
                     </div>
                 </div>
             </div>
