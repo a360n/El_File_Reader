@@ -11,6 +11,7 @@ builder.Services.AddSingleton<ElParserService>();
 builder.Services.AddSingleton<AuditStorageService>();
 builder.Services.AddSingleton<TiffImageService>();
 builder.Services.AddSingleton<PdfExportService>();
+builder.Services.AddSingleton<AiCellPipelineService>();
 
 var app = builder.Build();
 
