@@ -40,9 +40,11 @@ namespace EcoLabReaderApp.Services
                 };
             }
 
+            string pythonExe = FindPythonExecutable();
+
             var startInfo = new ProcessStartInfo
             {
-                FileName = "python3",
+                FileName = pythonExe,
                 Arguments = $"\"{scriptPath}\" \"{restructuredPath}\" \"{aiCellPath}\"",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -67,10 +69,20 @@ namespace EcoLabReaderApp.Services
 
                 if (process.ExitCode != 0)
                 {
+                    string combinedErr = (error + " " + output).Trim();
+                    if (combinedErr.Contains("was not found") || combinedErr.Contains("Microsoft Store"))
+                    {
+                        return new AiCellPipelineResult
+                        {
+                            Success = false,
+                            Message = "لم يتم العثور على محرك Python مثبت على جهاز Windows هذا. يرجى تثبيت Python (أو التأكد من إضافة Python إلى متغيرات النظام PATH) ثم إعادة المحاولة."
+                        };
+                    }
+
                     return new AiCellPipelineResult
                     {
                         Success = false,
-                        Message = $"خطأ أثناء تشغيل سكربت Python: {error}"
+                        Message = $"خطأ أثناء تشغيل سكربت Python: {combinedErr}"
                     };
                 }
 
@@ -89,6 +101,66 @@ namespace EcoLabReaderApp.Services
                     };
                 }
             }
+        }
+
+        private string FindPythonExecutable()
+        {
+            string[] candidates = OperatingSystem.IsWindows()
+                ? new[] { "py", "python", "python3" }
+                : new[] { "python3", "python" };
+
+            foreach (var cmd in candidates)
+            {
+                try
+                {
+                    var psi = new ProcessStartInfo
+                    {
+                        FileName = cmd,
+                        Arguments = "--version",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true
+                    };
+
+                    using (var proc = Process.Start(psi))
+                    {
+                        if (proc != null)
+                        {
+                            string stdout = proc.StandardOutput.ReadToEnd();
+                            string stderr = proc.StandardError.ReadToEnd();
+                            proc.WaitForExit();
+
+                            string combined = (stdout + stderr).ToLower();
+                            if (proc.ExitCode == 0 && combined.Contains("python") && !combined.Contains("was not found"))
+                            {
+                                return cmd;
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore and try next candidate
+                }
+            }
+
+            // Search Windows specific AppData paths if still not found
+            if (OperatingSystem.IsWindows())
+            {
+                string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string programsPath = Path.Combine(localAppData, "Programs", "Python");
+                if (Directory.Exists(programsPath))
+                {
+                    foreach (var dir in Directory.GetDirectories(programsPath, "Python3*"))
+                    {
+                        string exe = Path.Combine(dir, "python.exe");
+                        if (File.Exists(exe)) return exe;
+                    }
+                }
+            }
+
+            return OperatingSystem.IsWindows() ? "python" : "python3";
         }
     }
 
