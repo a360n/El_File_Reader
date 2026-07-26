@@ -11,18 +11,6 @@
 
 @section HeaderActions {
     <div class="d-flex align-items-center gap-2">
-        <a href="/Audit/Index" class="btn btn-outline-light rounded-3 px-3">
-            <i class="fa-solid fa-house me-1"></i>الواجهة الرئيسية (جميع الألواح)
-        </a>
-
-        <a href="/Audit/GoodPanels" class="btn btn-outline-success rounded-3 px-3">
-            <i class="fa-solid fa-circle-check me-1"></i>الألواح السليمة فقط
-        </a>
-
-        <a href="/Audit/DefectivePanels" class="btn btn-danger text-white rounded-3 px-3 fw-bold">
-            <i class="fa-solid fa-triangle-exclamation me-1"></i>الألواح المعيبة فقط
-        </a>
-
         @if (hasPrevious)
         {
             <a href="/Audit/DefectivePanels?panelIndex=@(currentIndex - 1)" class="btn btn-outline-warning rounded-3 px-3">

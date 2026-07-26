@@ -131,22 +131,101 @@
         .table-custom td {
             background-color: var(--card-bg);
         }
+
+        .offcanvas-custom {
+            background-color: var(--card-bg);
+            color: var(--text-main);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            width: 320px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: 12px;
+            color: var(--text-main);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+            color: #38bdf8;
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        .sidebar-link.active {
+            background-color: rgba(56, 189, 248, 0.15);
+            color: #38bdf8;
+            border-color: #38bdf8;
+        }
     </style>
 
     @RenderSection("Styles", required: false)
 </head>
 <body>
+    <!-- Offcanvas Sliding Sidebar Drawer -->
+    <div class="offcanvas offcanvas-start offcanvas-custom" tabindex="-1" id="sidebarDrawer" aria-labelledby="sidebarDrawerLabel">
+        <div class="offcanvas-header border-bottom border-secondary pb-3">
+            <h5 class="offcanvas-title fw-bold text-info" id="sidebarDrawerLabel">
+                <i class="fa-solid fa-bars-staggered me-2"></i>القائمة الرئيسية
+            </h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column justify-content-between p-4">
+            <div class="d-grid gap-2">
+                <a href="/Audit/Index" class="sidebar-link">
+                    <i class="fa-solid fa-house fs-5 text-primary"></i>
+                    <span>الواجهة الرئيسية (جميع الألواح)</span>
+                </a>
+                <a href="/Audit/GoodPanels" class="sidebar-link">
+                    <i class="fa-solid fa-circle-check fs-5 text-success"></i>
+                    <span>الألواh السليمة فقط (Good_models)</span>
+                </a>
+                <a href="/Audit/DefectivePanels" class="sidebar-link">
+                    <i class="fa-solid fa-triangle-exclamation fs-5 text-danger"></i>
+                    <span>الألواح المعيبة فقط (bad_models)</span>
+                </a>
+                
+                <hr class="border-secondary my-3" />
+
+                <button type="button" class="sidebar-link w-100 text-start bg-dark border border-warning text-warning" id="btnDrawerRestructure">
+                    <i class="fa-solid fa-rotate fs-5"></i>
+                    <span>إعادة فرز الـ container</span>
+                </button>
+            </div>
+
+            <div class="p-3 rounded-3 bg-dark border border-secondary text-center mt-4">
+                <small class="text-light fw-bold d-block mb-2"><i class="fa-solid fa-keyboard me-1 text-info"></i>اختصارات لوحة المفاتيح:</small>
+                <div class="d-flex justify-content-around">
+                    <span class="badge bg-success fs-6"><kbd>A</kbd> إبقاء</span>
+                    <span class="badge bg-warning text-dark fs-6"><kbd>R</kbd> إعادة تقييم</span>
+                    <span class="badge bg-danger fs-6"><kbd>U</kbd> تالف</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-custom sticky-top py-3">
         <div class="container-fluid px-4">
-            <a class="navbar-brand d-flex align-items-center gap-3 text-white fw-bold" href="/Audit/Index">
-                <i class="fa-solid fa-microchip text-info fs-3"></i>
-                <span>قارئ EcoLAB EL وتدقيق بيانات الذكاء الاصطناعي</span>
-            </a>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Hamburger Menu Button in top right corner -->
+                <button class="btn btn-outline-light rounded-3 px-3 py-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarDrawer" aria-controls="sidebarDrawer" title="القائمة الجانبية">
+                    <i class="fa-solid fa-bars fs-4"></i>
+                </button>
+
+                <a class="navbar-brand d-flex align-items-center gap-3 text-white fw-bold m-0" href="/Audit/Index">
+                    <i class="fa-solid fa-microchip text-info fs-3"></i>
+                    <span>قارئ EcoLAB EL وتدقيق بيانات الذكاء الاصطناعي</span>
+                </a>
+            </div>
 
             <div class="d-flex align-items-center gap-3">
-                <a href="/Audit/DefectivePanels" class="btn btn-outline-danger rounded-3 px-3 fw-bold" title="الانتقال لصفحة الألواح المعيبة فقط (تخطي الألواح السليمة)">
-                    <i class="fa-solid fa-triangle-exclamation me-1"></i>الألواح المعيبة فقط
-                </a>
                 @RenderSection("HeaderActions", required: false)
             </div>
         </div>
@@ -157,6 +236,26 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Global Restructure listener for the Sidebar Drawer button
+        const btnDrawerRestructure = document.getElementById('btnDrawerRestructure');
+        if (btnDrawerRestructure) {
+            btnDrawerRestructure.addEventListener('click', async () => {
+                btnDrawerRestructure.disabled = true;
+                btnDrawerRestructure.innerHTML = '<i class="fa-solid fa-spinner fa-spin fs-5"></i><span>جاري الفرز...</span>';
+                try {
+                    const res = await fetch('/Audit/TriggerRestructure', { method: 'POST' });
+                    const data = await res.json();
+                    alert(data.message);
+                    window.location.reload();
+                } catch (e) {
+                    alert('حدث خطأ أثناء الفرز: ' + e.message);
+                    btnDrawerRestructure.disabled = false;
+                    btnDrawerRestructure.innerHTML = '<i class="fa-solid fa-rotate fs-5"></i><span>إعادة فرز الـ container</span>';
+                }
+            });
+        }
+    </script>
     @RenderSection("Scripts", required: false)
 </body>
 </html>

@@ -10,34 +10,25 @@
 
 @section HeaderActions {
     <div class="d-flex align-items-center gap-2">
-        <button type="button" class="btn btn-outline-warning rounded-3 px-3" id="btnHeaderRestructure" title="إعادة فرز أي ملفات جديدة في مجلد container">
-            <i class="fa-solid fa-rotate me-1"></i>فرز الـ container
-        </button>
-
-        <a href="/Audit/GoodPanels" class="btn btn-outline-success rounded-3 px-3">
-            <i class="fa-solid fa-circle-check me-1"></i>الألواح السليمة فقط
-        </a>
-
-        <a href="/Audit/DefectivePanels" class="btn btn-outline-danger rounded-3 px-3">
-            <i class="fa-solid fa-triangle-exclamation me-1"></i>الألواح المعيبة فقط
-        </a>
-
         @if (hasPrevious)
         {
             <a href="/Audit/Index?panelIndex=@(currentIndex - 1)" class="btn btn-outline-light rounded-3 px-3">
-                <i class="fa-solid fa-arrow-right me-1"></i>عودة للوح السابق
+                <i class="fa-solid fa-arrow-right me-1"></i>اللوح السابق
             </a>
         }
         else
         {
             <button class="btn btn-outline-secondary rounded-3 px-3" disabled>
-                <i class="fa-solid fa-arrow-right me-1"></i>عودة للوح السابق
+                <i class="fa-solid fa-arrow-right me-1"></i>اللوح السابق
             </button>
         }
 
-        <a href="/Audit/Log" class="btn btn-custom-blue rounded-3 px-4">
-            <i class="fa-solid fa-chart-pie me-1"></i>سجل مطابقة قراءة الـ EL
-        </a>
+        @if (hasNext)
+        {
+            <a href="/Audit/Index?panelIndex=@(currentIndex + 1)" class="btn btn-primary rounded-3 px-3 fw-bold">
+                اللوح التالي<i class="fa-solid fa-arrow-left ms-1"></i>
+            </a>
+        }
 
         <span class="badge bg-secondary fs-6 px-3 py-2 rounded-3">
             لوح @(currentIndex + 1) من @totalPanels
