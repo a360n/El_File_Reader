@@ -59,6 +59,46 @@ public class AuditController : Controller
         return View(elInfo);
     }
 
+    public IActionResult GoodPanels(int panelIndex = 0)
+    {
+        _restructurer.RunFullRestructuringAndPartitioning(_parser);
+        var allFolders = GetRestructuredFolders();
+
+        var goodList = new List<(string Folder, ElPanelInfo Info)>();
+
+        foreach (var folder in allFolders)
+        {
+            string infoElPath = System.IO.Path.Combine(folder, "info.el");
+            string folderName = System.IO.Path.GetFileName(folder);
+            var info = _parser.ParseElFile(infoElPath, folderName);
+
+            if (!info.IsDefective && info.Defects.Count == 0)
+            {
+                goodList.Add((folder, info));
+            }
+        }
+
+        if (goodList.Count == 0)
+        {
+            ViewBag.Message = "لا توجد أية ألواح سليمة نموذجية حالياً في مجلدات الفحص.";
+            return View("EmptyState");
+        }
+
+        if (panelIndex < 0) panelIndex = 0;
+        if (panelIndex >= goodList.Count) panelIndex = goodList.Count - 1;
+
+        var currentItem = goodList[panelIndex];
+        var existingRecord = _auditStorage.GetRecord(currentItem.Info.FolderName);
+
+        ViewBag.CurrentIndex = panelIndex;
+        ViewBag.TotalGoodPanels = goodList.Count;
+        ViewBag.HasPrevious = panelIndex > 0;
+        ViewBag.HasNext = panelIndex < goodList.Count - 1;
+        ViewBag.ExistingRecord = existingRecord;
+
+        return View("GoodPanels", currentItem.Info);
+    }
+
     public IActionResult DefectivePanels(int panelIndex = 0)
     {
         _restructurer.RunFullRestructuringAndPartitioning(_parser);

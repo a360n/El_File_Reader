@@ -14,6 +14,14 @@
             <i class="fa-solid fa-rotate me-1"></i>فرز الـ container
         </button>
 
+        <a href="/Audit/GoodPanels" class="btn btn-outline-success rounded-3 px-3">
+            <i class="fa-solid fa-circle-check me-1"></i>الألواح السليمة فقط
+        </a>
+
+        <a href="/Audit/DefectivePanels" class="btn btn-outline-danger rounded-3 px-3">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i>الألواح المعيبة فقط
+        </a>
+
         @if (hasPrevious)
         {
             <a href="/Audit/Index?panelIndex=@(currentIndex - 1)" class="btn btn-outline-light rounded-3 px-3">

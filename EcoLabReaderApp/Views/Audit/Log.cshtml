@@ -5,9 +5,19 @@
 }
 
 @section HeaderActions {
-    <a href="/Audit/Index" class="btn btn-outline-light rounded-3 px-4">
-        <i class="fa-solid fa-arrow-right me-2"></i>عودة لصفحة الفحص والتدقيق
-    </a>
+    <div class="d-flex align-items-center gap-2">
+        <a href="/Audit/Index" class="btn btn-outline-light rounded-3 px-3">
+            <i class="fa-solid fa-house me-1"></i>الواجهة الرئيسية (جميع الألواح)
+        </a>
+
+        <a href="/Audit/GoodPanels" class="btn btn-outline-success rounded-3 px-3">
+            <i class="fa-solid fa-circle-check me-1"></i>الألواح السليمة فقط
+        </a>
+
+        <a href="/Audit/DefectivePanels" class="btn btn-outline-danger rounded-3 px-3">
+            <i class="fa-solid fa-triangle-exclamation me-1"></i>الألواح المعيبة فقط
+        </a>
+    </div>
 }
 
 <div class="row g-4 mb-4">
