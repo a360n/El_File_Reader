@@ -27,10 +27,6 @@
             </button>
         }
 
-        <a href="/Audit/RatingDistribution" class="btn btn-outline-info rounded-3 px-3">
-            <i class="fa-solid fa-star-half-stroke me-1"></i>توزيع الألواح حسب التقييم
-        </a>
-
         <a href="/Audit/Log" class="btn btn-custom-blue rounded-3 px-4">
             <i class="fa-solid fa-chart-pie me-1"></i>سجل مطابقة قراءة الـ EL
         </a>
@@ -47,21 +43,21 @@
         <div class="card-custom p-4 mb-4">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold m-0"><i class="fa-solid fa-images text-info me-2"></i>معاينة صور اللوح الشمسي</h5>
-                <span class="text-muted">مجلد اللوح: <code>@Model.FolderName</code></span>
+                <span class="text-light">مجلد اللوح: <code>@Model.FolderName</code></span>
             </div>
 
-            <!-- Two Images Side by Side -->
+            <!-- Image Viewer Container -->
             <div class="row g-3">
                 <div class="col-md-6">
                     <div class="img-container">
-                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark opacity-75">row.tif (الصورة الخام)</span>
-                        <img src="/Audit/Image?folderName=@Model.FolderName&type=row" alt="Raw Tiff Image" id="imgRaw" />
+                        <span class="img-label">الصورة الخام (row.tif)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName&type=row" alt="Row Image" id="imgRow" class="img-fluid" />
                     </div>
                 </div>
                 <div class="col-md-6">
                     <div class="img-container">
-                        <span class="position-absolute top-0 start-0 m-2 badge bg-danger opacity-75">marked.tif (المؤشرة بالعيوب)</span>
-                        <img src="/Audit/Image?folderName=@Model.FolderName&type=marked" alt="Marked Tiff Image" id="imgMarked" />
+                        <span class="img-label">الصورة المؤشرة (marked.tif)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName&type=marked" alt="Marked Image" id="imgMarked" class="img-fluid" />
                     </div>
                 </div>
             </div>
@@ -72,19 +68,19 @@
             <h5 class="fw-bold mb-3"><i class="fa-solid fa-circle-info text-primary me-2"></i>المعلومات المقروءة من ملف info.el</h5>
             
             <div class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-light d-block mb-1 fw-semibold">الرقم التسلسلي للوح:</small>
                         <strong class="fs-5 text-warning">@Model.SerialNumber</strong>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-light d-block mb-1 fw-semibold">التاريخ والوقت بالضبط:</small>
                         <strong class="fs-6 text-light">@Model.Timestamp</strong>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="p-3 rounded-3 bg-dark border border-secondary">
                         <small class="text-light d-block mb-1 fw-semibold">حالة القارئ EL:</small>
                         @if (Model.IsDefective)
@@ -97,29 +93,6 @@
                         }
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="p-3 rounded-3 bg-dark border border-secondary">
-                        <small class="text-light d-block mb-1 fw-semibold">تقييم اللوح (Rating):</small>
-                        @if (Model.Rating.Contains("درجة A") || Model.Rating.Contains("1 Star") || Model.Rating.Contains("كاملة"))
-                        {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐⭐ <span class="fs-6 text-light">(درجة A)</span></strong>
-                        }
-                        else if (Model.Rating.Contains("درجة B") || Model.Rating.Contains("2/3 Stars") || Model.Rating.Contains("ثلثين"))
-                        {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐⭐☆ <span class="fs-6 text-light">(درجة B)</span></strong>
-                        }
-                        else if (Model.Rating.Contains("درجة C") || Model.Rating.Contains("1/3 Star") || Model.Rating.Contains("ثلث"))
-                        {
-                            <strong class="fs-5 text-warning" title="@Model.Rating">⭐☆☆ <span class="fs-6 text-light">(درجة C)</span></strong>
-                        }
-                        else if (Model.Rating.Contains("درجة D") || Model.Rating.Contains("0 Stars") || Model.Rating.Contains("صفر"))
-                        {
-                            <strong class="fs-5 text-secondary" title="@Model.Rating">☆☆☆ <span class="fs-6 text-light">(درجة D)</span></strong>
-                        }
-                        else
-                        {
-                            <span class="badge bg-secondary text-white fs-6">@Model.Rating</span>
-                        }
                     </div>
                 </div>
             </div>

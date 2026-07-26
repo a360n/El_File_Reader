@@ -170,61 +170,7 @@ public class AuditController : Controller
         }
     }
 
-    public IActionResult RatingDistribution(string grade = "ALL")
-    {
-        _restructurer.RunRestructuring();
-        var allFolders = GetRestructuredFolders();
 
-        var allPanels = new List<(string Folder, ElPanelInfo Info, int OriginalIndex)>();
-
-        int gradeACount = 0;
-        int gradeBCount = 0;
-        int gradeCCount = 0;
-        int gradeDCount = 0;
-
-        for (int i = 0; i < allFolders.Count; i++)
-        {
-            string folder = allFolders[i];
-            string infoElPath = System.IO.Path.Combine(folder, "info.el");
-            string folderName = System.IO.Path.GetFileName(folder);
-            var info = _parser.ParseElFile(infoElPath, folderName);
-
-            if (info.Rating.Contains("درجة A") || info.Rating.Contains("1 Star") || info.Rating.Contains("كاملة"))
-                gradeACount++;
-            else if (info.Rating.Contains("درجة B") || info.Rating.Contains("2/3 Stars") || info.Rating.Contains("ثلثين"))
-                gradeBCount++;
-            else if (info.Rating.Contains("درجة C") || info.Rating.Contains("1/3 Star") || info.Rating.Contains("ثلث"))
-                gradeCCount++;
-            else if (info.Rating.Contains("درجة D") || info.Rating.Contains("0 Stars") || info.Rating.Contains("صفر"))
-                gradeDCount++;
-
-            allPanels.Add((folder, info, i));
-        }
-
-        string activeGrade = grade?.ToUpper() ?? "ALL";
-
-        var filteredList = allPanels.Where(p =>
-        {
-            if (activeGrade == "A")
-                return p.Info.Rating.Contains("درجة A") || p.Info.Rating.Contains("1 Star") || p.Info.Rating.Contains("كاملة");
-            if (activeGrade == "B")
-                return p.Info.Rating.Contains("درجة B") || p.Info.Rating.Contains("2/3 Stars") || p.Info.Rating.Contains("ثلثين");
-            if (activeGrade == "C")
-                return p.Info.Rating.Contains("درجة C") || p.Info.Rating.Contains("1/3 Star") || p.Info.Rating.Contains("ثلث");
-            if (activeGrade == "D")
-                return p.Info.Rating.Contains("درجة D") || p.Info.Rating.Contains("0 Stars") || p.Info.Rating.Contains("صفر");
-            return true; // ALL
-        }).ToList();
-
-        ViewBag.ActiveGrade = activeGrade;
-        ViewBag.TotalPanels = allFolders.Count;
-        ViewBag.GradeACount = gradeACount;
-        ViewBag.GradeBCount = gradeBCount;
-        ViewBag.GradeCCount = gradeCCount;
-        ViewBag.GradeDCount = gradeDCount;
-
-        return View(filteredList);
-    }
 
     public IActionResult Log()
     {
