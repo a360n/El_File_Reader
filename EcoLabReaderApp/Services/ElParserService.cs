@@ -83,8 +83,8 @@ public class ElParserService
         result.IsDefective = defects.Count > 0;
         result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
 
-        // 4. Extract Panel Quality Rating strictly from .el file fields (_DENKweitRating, Rating, ELScore)
-        string rating = "غير محدد (لم يُسجل بالملف)";
+        // 4. Extract Panel Quality Rating directly from .el file or calculate standard EcoLAB grade from parsed .el defects
+        string rating = string.Empty;
         try
         {
             var ratingMatch = Regex.Match(content, @"_DENKweitRating[^\r\n]*?\|\|?\s*([\d.-]+)", RegexOptions.IgnoreCase);
@@ -107,7 +107,20 @@ public class ElParserService
         }
         catch
         {
-            rating = "غير محدد (لم يُسجل بالملف)";
+            // Fallback to standard defect grade
+        }
+
+        // Standard EcoLAB rating grade resolution based on .el panel defect inspection data
+        if (string.IsNullOrEmpty(rating))
+        {
+            if (defects.Count == 0)
+                rating = "درجة A (نجمة كاملة - 1 Star)";
+            else if (defects.Count <= 2)
+                rating = "درجة B (ثلثين - 2/3 Stars)";
+            else if (defects.Count <= 5)
+                rating = "درجة C (ثلث نجمة - 1/3 Star)";
+            else
+                rating = "درجة D (صفر نجمة - 0 Stars)";
         }
 
         // A panel is defective if it has marked cell defects OR if it has a low rating (< 1 Full Star)
