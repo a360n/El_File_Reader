@@ -278,8 +278,37 @@ def run_pipeline(restructured_path, aicell_path):
     aicell_good_models = os.path.join(aicell_path, "Good_models")
     aicell_bad_models = os.path.join(aicell_path, "bad_models")
 
+    os.makedirs(good_models_dir, exist_ok=True)
+    os.makedirs(bad_models_dir, exist_ok=True)
     os.makedirs(aicell_good_models, exist_ok=True)
     os.makedirs(aicell_bad_models, exist_ok=True)
+
+    # Auto-Restore: Move any panel folders previously moved into AICell back into Restructured
+    for src_m, dst_m in [(aicell_good_models, good_models_dir), (aicell_bad_models, bad_models_dir)]:
+        if os.path.exists(src_m):
+            for item in os.listdir(src_m):
+                src_item = os.path.join(src_m, item)
+                if os.path.isdir(src_item) and item not in ["all_good_cells", "all_bad_cells"]:
+                    # Remove old single cells subfolders inside panel folder to force fresh rectangular cropping
+                    for old_sub in ["all single cells", "defective single cells"]:
+                        old_p = os.path.join(src_item, old_sub)
+                        if os.path.exists(old_p):
+                            shutil.rmtree(old_p, ignore_errors=True)
+
+                    dst_item = os.path.join(dst_m, item)
+                    if os.path.exists(dst_item):
+                        shutil.rmtree(dst_item, ignore_errors=True)
+                    shutil.move(src_item, dst_item)
+
+    # Purge old global cell aggregation folders
+    for old_global in [
+        os.path.join(good_models_dir, "all_good_cells"),
+        os.path.join(bad_models_dir, "all_bad_cells"),
+        os.path.join(aicell_path, "all_good_cells"),
+        os.path.join(aicell_path, "all_bad_cells")
+    ]:
+        if os.path.exists(old_global):
+            shutil.rmtree(old_global, ignore_errors=True)
 
     results = []
 
