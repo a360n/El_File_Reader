@@ -14,32 +14,53 @@ public class FileRestructurerService
 
     public FileRestructurerService(IWebHostEnvironment env)
     {
-        string parentDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, ".."));
-        
-        string candidateContainer = Path.Combine(parentDir, "container");
-        string candidateRestructured = Path.Combine(parentDir, "Restructured");
-        string candidateReEvaluation = Path.Combine(parentDir, "Re_evaluation");
-        string candidateUseless = Path.Combine(parentDir, "Useless");
+        string baseDir = ResolveBaseDirectory(env);
 
-        if (!Directory.Exists(candidateContainer) && Directory.Exists(Path.Combine(env.ContentRootPath, "container")))
-        {
-            _containerPath = Path.Combine(env.ContentRootPath, "container");
-            _restructuredPath = Path.Combine(env.ContentRootPath, "Restructured");
-            _reEvaluationPath = Path.Combine(env.ContentRootPath, "Re_evaluation");
-            _uselessPath = Path.Combine(env.ContentRootPath, "Useless");
-        }
-        else
-        {
-            _containerPath = candidateContainer;
-            _restructuredPath = candidateRestructured;
-            _reEvaluationPath = candidateReEvaluation;
-            _uselessPath = candidateUseless;
-        }
-
+        _containerPath = Path.Combine(baseDir, "container");
+        _restructuredPath = Path.Combine(baseDir, "Restructured");
         _goodModelsPath = Path.Combine(_restructuredPath, "Good_models");
         _badModelsPath = Path.Combine(_restructuredPath, "bad_models");
+        _reEvaluationPath = Path.Combine(baseDir, "Re_evaluation");
+        _uselessPath = Path.Combine(baseDir, "Useless");
 
         EnsureDirectoriesExist();
+    }
+
+    private string ResolveBaseDirectory(IWebHostEnvironment env)
+    {
+        string contentRoot = env.ContentRootPath;
+        string parent = Path.GetFullPath(Path.Combine(contentRoot, ".."));
+        string grandParent = Path.GetFullPath(Path.Combine(contentRoot, "..", ".."));
+        string cwd = Directory.GetCurrentDirectory();
+
+        string[] candidates = new[] { grandParent, parent, contentRoot, cwd };
+
+        // Priority 1: Pick candidate directory where 'container' exists AND contains files
+        foreach (var dir in candidates)
+        {
+            string containerCandidate = Path.Combine(dir, "container");
+            if (Directory.Exists(containerCandidate))
+            {
+                var files = Directory.GetFiles(containerCandidate, "*.*", SearchOption.AllDirectories);
+                if (files.Length > 0)
+                {
+                    return dir;
+                }
+            }
+        }
+
+        // Priority 2: Pick candidate directory where 'container' or 'Restructured' already exists
+        foreach (var dir in candidates)
+        {
+            string containerCandidate = Path.Combine(dir, "container");
+            string restructuredCandidate = Path.Combine(dir, "Restructured");
+            if (Directory.Exists(containerCandidate) || Directory.Exists(restructuredCandidate))
+            {
+                return dir;
+            }
+        }
+
+        return parent;
     }
 
     public string ContainerPath => _containerPath;

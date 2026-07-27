@@ -232,11 +232,20 @@ public class AuditController : Controller
         return this.File(imageBytes, contentType);
     }
 
+    [HttpGet]
     [HttpPost]
     public IActionResult TriggerRestructure()
     {
         int count = _restructurer.RunFullRestructuringAndPartitioning(_parser);
-        return Json(new { success = true, count, message = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح" });
+
+        if (Request.Headers["Accept"].ToString().Contains("json", StringComparison.OrdinalIgnoreCase) ||
+            Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+        {
+            return Json(new { success = true, count, message = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح" });
+        }
+
+        TempData["Message"] = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح";
+        return RedirectToAction("Index");
     }
 
     [HttpPost]
