@@ -11,22 +11,19 @@ public class AuditController : Controller
     private readonly AuditStorageService _auditStorage;
     private readonly TiffImageService _imageService;
     private readonly PdfExportService _pdfService;
-    private readonly AiCellPipelineService _aiCellPipeline;
 
     public AuditController(
         FileRestructurerService restructurer,
         ElParserService parser,
         AuditStorageService auditStorage,
         TiffImageService imageService,
-        PdfExportService pdfService,
-        AiCellPipelineService aiCellPipeline)
+        PdfExportService pdfService)
     {
         _restructurer = restructurer;
         _parser = parser;
         _auditStorage = auditStorage;
         _imageService = imageService;
         _pdfService = pdfService;
-        _aiCellPipeline = aiCellPipeline;
     }
 
     public IActionResult Index(int panelIndex = 0)
@@ -232,27 +229,11 @@ public class AuditController : Controller
         return this.File(imageBytes, contentType);
     }
 
-    [HttpGet]
     [HttpPost]
     public IActionResult TriggerRestructure()
     {
         int count = _restructurer.RunFullRestructuringAndPartitioning(_parser);
-
-        if (Request.Headers["Accept"].ToString().Contains("json", StringComparison.OrdinalIgnoreCase) ||
-            Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-        {
-            return Json(new { success = true, count, message = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح" });
-        }
-
-        TempData["Message"] = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح";
-        return RedirectToAction("Index");
-    }
-
-    [HttpPost]
-    public IActionResult TriggerAiCellPipeline()
-    {
-        var result = _aiCellPipeline.RunPipeline();
-        return Json(result);
+        return Json(new { success = true, count, message = $"تم إعادة هيكلة وفرز وتوزيع {count} ألواح بنجاح" });
     }
 
     private List<string> GetRestructuredFolders()

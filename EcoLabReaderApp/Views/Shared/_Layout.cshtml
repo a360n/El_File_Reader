@@ -197,11 +197,6 @@
                     <i class="fa-solid fa-rotate fs-5"></i>
                     <span>إعادة فرز الـ container</span>
                 </button>
-
-                <button type="button" class="sidebar-link w-100 text-start bg-dark border border-info text-info fw-bold" id="btnDrawerAiCellPipeline" title="تجهيز وتقطيع خلايا الألواح وتوليد داتا الذكاء الاصطناعي لـ AICell">
-                    <i class="fa-solid fa-brain fs-5"></i>
-                    <span>تجهيز داتا الذكاء الاصطناعي (AICell Pipeline)</span>
-                </button>
             </div>
 
             <div class="p-3 rounded-3 bg-dark border border-secondary text-center mt-4">
@@ -257,25 +252,6 @@
                     alert('حدث خطأ أثناء الفرز: ' + e.message);
                     btnDrawerRestructure.disabled = false;
                     btnDrawerRestructure.innerHTML = '<i class="fa-solid fa-rotate fs-5"></i><span>إعادة فرز الـ container</span>';
-                }
-            });
-        }
-
-        // Global AICell Pipeline listener for the Sidebar Drawer button
-        const btnDrawerAiCellPipeline = document.getElementById('btnDrawerAiCellPipeline');
-        if (btnDrawerAiCellPipeline) {
-            btnDrawerAiCellPipeline.addEventListener('click', async () => {
-                btnDrawerAiCellPipeline.disabled = true;
-                btnDrawerAiCellPipeline.innerHTML = '<i class="fa-solid fa-spinner fa-spin fs-5"></i><span>جاري المعالجة وتقطيع الخلايا...</span>';
-                try {
-                    const res = await fetch('/Audit/TriggerAiCellPipeline', { method: 'POST' });
-                    const data = await res.json();
-                    alert(data.message);
-                    window.location.reload();
-                } catch (e) {
-                    alert('حدث خطأ أثناء معالجة وتقطيع الخلايا: ' + e.message);
-                    btnDrawerAiCellPipeline.disabled = false;
-                    btnDrawerAiCellPipeline.innerHTML = '<i class="fa-solid fa-brain fs-5"></i><span>تجهيز داتا الذكاء الاصطناعي (AICell Pipeline)</span>';
                 }
             });
         }

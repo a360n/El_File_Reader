@@ -14,53 +14,32 @@ public class FileRestructurerService
 
     public FileRestructurerService(IWebHostEnvironment env)
     {
-        string baseDir = ResolveBaseDirectory(env);
+        string parentDir = Path.GetFullPath(Path.Combine(env.ContentRootPath, ".."));
+        
+        string candidateContainer = Path.Combine(parentDir, "container");
+        string candidateRestructured = Path.Combine(parentDir, "Restructured");
+        string candidateReEvaluation = Path.Combine(parentDir, "Re_evaluation");
+        string candidateUseless = Path.Combine(parentDir, "Useless");
 
-        _containerPath = Path.Combine(baseDir, "container");
-        _restructuredPath = Path.Combine(baseDir, "Restructured");
+        if (!Directory.Exists(candidateContainer) && Directory.Exists(Path.Combine(env.ContentRootPath, "container")))
+        {
+            _containerPath = Path.Combine(env.ContentRootPath, "container");
+            _restructuredPath = Path.Combine(env.ContentRootPath, "Restructured");
+            _reEvaluationPath = Path.Combine(env.ContentRootPath, "Re_evaluation");
+            _uselessPath = Path.Combine(env.ContentRootPath, "Useless");
+        }
+        else
+        {
+            _containerPath = candidateContainer;
+            _restructuredPath = candidateRestructured;
+            _reEvaluationPath = candidateReEvaluation;
+            _uselessPath = candidateUseless;
+        }
+
         _goodModelsPath = Path.Combine(_restructuredPath, "Good_models");
         _badModelsPath = Path.Combine(_restructuredPath, "bad_models");
-        _reEvaluationPath = Path.Combine(baseDir, "Re_evaluation");
-        _uselessPath = Path.Combine(baseDir, "Useless");
 
         EnsureDirectoriesExist();
-    }
-
-    private string ResolveBaseDirectory(IWebHostEnvironment env)
-    {
-        string contentRoot = env.ContentRootPath;
-        string parent = Path.GetFullPath(Path.Combine(contentRoot, ".."));
-        string grandParent = Path.GetFullPath(Path.Combine(contentRoot, "..", ".."));
-        string cwd = Directory.GetCurrentDirectory();
-
-        string[] candidates = new[] { grandParent, parent, contentRoot, cwd };
-
-        // Priority 1: Pick candidate directory where 'container' exists AND contains files
-        foreach (var dir in candidates)
-        {
-            string containerCandidate = Path.Combine(dir, "container");
-            if (Directory.Exists(containerCandidate))
-            {
-                var files = Directory.GetFiles(containerCandidate, "*.*", SearchOption.AllDirectories);
-                if (files.Length > 0)
-                {
-                    return dir;
-                }
-            }
-        }
-
-        // Priority 2: Pick candidate directory where 'container' or 'Restructured' already exists
-        foreach (var dir in candidates)
-        {
-            string containerCandidate = Path.Combine(dir, "container");
-            string restructuredCandidate = Path.Combine(dir, "Restructured");
-            if (Directory.Exists(containerCandidate) || Directory.Exists(restructuredCandidate))
-            {
-                return dir;
-            }
-        }
-
-        return parent;
     }
 
     public string ContainerPath => _containerPath;
@@ -293,28 +272,6 @@ public class FileRestructurerService
 
         if (!Directory.Exists(_containerPath)) return 0;
 
-        int organizedCount = 0;
-
-        // Pass A: Check if container or any subfolder contains pre-structured panel folders (folders containing info.el)
-        try
-        {
-            var allSubDirs = Directory.GetDirectories(_containerPath, "*", SearchOption.AllDirectories);
-            foreach (var dir in allSubDirs)
-            {
-                if (!Directory.Exists(dir)) continue;
-                string infoEl = Path.Combine(dir, "info.el");
-                if (File.Exists(infoEl))
-                {
-                    string folderName = Path.GetFileName(dir);
-                    string targetDir = Path.Combine(_restructuredPath, folderName);
-                    SafeMoveDirectory(dir, targetDir);
-                    organizedCount++;
-                }
-            }
-        }
-        catch { }
-
-        // Pass B: Scan all remaining loose files inside container/
         var allFiles = Directory.GetFiles(_containerPath, "*.*", SearchOption.AllDirectories)
                                 .Where(f => f.EndsWith(".el", StringComparison.OrdinalIgnoreCase) ||
                                             f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) ||
@@ -324,25 +281,29 @@ public class FileRestructurerService
         if (allFiles.Count == 0)
         {
             CleanEmptyFolders(_containerPath);
-            return organizedCount;
+            return 0;
         }
 
         var triplets = MatchTriplets(allFiles);
+        int organizedCount = 0;
 
         foreach (var triplet in triplets)
         {
-            if (string.IsNullOrEmpty(triplet.InfoElPath) || string.IsNullOrEmpty(triplet.RawTifPath))
+            if (!triplet.IsComplete)
             {
+                // Ignore incomplete triplets
                 continue;
             }
 
             try
             {
+                // Get timestamp from .el file
                 var elFileInfo = new FileInfo(triplet.InfoElPath);
                 string timestampFolder = elFileInfo.LastWriteTime.ToString("yyyy-MM-dd_HH-mm-ss");
 
                 string targetFolder = Path.Combine(_restructuredPath, timestampFolder);
                 
+                // If folder already exists, append unique suffix
                 if (Directory.Exists(targetFolder))
                 {
                     targetFolder = Path.Combine(_restructuredPath, $"{timestampFolder}_{triplet.CommonKey}");
@@ -350,10 +311,12 @@ public class FileRestructurerService
 
                 Directory.CreateDirectory(targetFolder);
 
+                // Target paths
                 string targetRawTif = Path.Combine(targetFolder, "row.tif");
                 string targetInfoEl = Path.Combine(targetFolder, "info.el");
                 string targetMarkedTif = Path.Combine(targetFolder, "marked.tif");
 
+                // Move files atomically & instantly (0 extra space required)
                 SafeMoveFile(triplet.RawTifPath, targetRawTif);
                 SafeMoveFile(triplet.InfoElPath, targetInfoEl);
                 SafeMoveFile(triplet.MarkedTifPath, targetMarkedTif);
@@ -366,7 +329,9 @@ public class FileRestructurerService
             }
         }
 
+        // Clean empty subfolders inside container
         CleanEmptyFolders(_containerPath);
+
         return organizedCount;
     }
 
@@ -394,75 +359,62 @@ public class FileRestructurerService
 
     private List<PanelTriplet> MatchTriplets(List<string> filePaths)
     {
-        var resultTriplets = new List<PanelTriplet>();
-        var directoryGroups = filePaths.GroupBy(Path.GetDirectoryName);
+        var dict = new Dictionary<string, PanelTriplet>(StringComparer.OrdinalIgnoreCase);
 
-        foreach (var group in directoryGroups)
+        // Strategy 1: Global Key Matching (matching panel digits e.g. 51410, 79360, etc.)
+        foreach (var filePath in filePaths)
         {
-            var dirFiles = group.ToList();
+            string fileName = Path.GetFileName(filePath);
+
+            var digitMatch = Regex.Match(fileName, @"(\d{4,6})", RegexOptions.IgnoreCase);
+            if (!digitMatch.Success) continue;
+
+            string key = digitMatch.Groups[1].Value;
+            var triplet = GetOrCreateTriplet(dict, key);
+
+            if (fileName.EndsWith(".el", StringComparison.OrdinalIgnoreCase))
+            {
+                triplet.InfoElPath = filePath;
+            }
+            else if (Regex.IsMatch(fileName, @"\.1\.tif$", RegexOptions.IgnoreCase) || Regex.IsMatch(fileName, @"_1\.tif$", RegexOptions.IgnoreCase))
+            {
+                triplet.RawTifPath = filePath;
+            }
+            else if (fileName.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
+            {
+                triplet.MarkedTifPath = filePath;
+            }
+        }
+
+        // Strategy 2: Subfolder Grouping Fallback
+        var subfolders = filePaths.Select(Path.GetDirectoryName)
+                                  .Distinct()
+                                  .Where(d => !string.IsNullOrEmpty(d) && !d.Equals(_containerPath, StringComparison.OrdinalIgnoreCase))
+                                  .ToList();
+
+        foreach (var subDir in subfolders)
+        {
+            var dirFiles = filePaths.Where(f => Path.GetDirectoryName(f) == subDir).ToList();
             var elFiles = dirFiles.Where(f => f.EndsWith(".el", StringComparison.OrdinalIgnoreCase)).ToList();
             var tifFiles = dirFiles.Where(f => f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (elFiles.Count == 0 || tifFiles.Count == 0) continue;
-
-            // Case A: 1 .el file in this directory -> ALL tif files in this directory belong to this .el file!
-            if (elFiles.Count == 1)
+            if (elFiles.Count == 1 && tifFiles.Count == 2)
             {
                 string elFile = elFiles[0];
                 string key = Path.GetFileNameWithoutExtension(elFile);
 
-                // Find RAW TIF (prefer .1.tif, _1.tif, row.tif, raw.tif)
-                string rawTif = tifFiles.FirstOrDefault(f => 
-                    Regex.IsMatch(Path.GetFileName(f), @"[\._]1\.tif$", RegexOptions.IgnoreCase) || 
-                    Path.GetFileName(f).StartsWith("row", StringComparison.OrdinalIgnoreCase) || 
-                    Path.GetFileName(f).StartsWith("raw", StringComparison.OrdinalIgnoreCase)
-                ) ?? tifFiles[0];
+                var triplet = GetOrCreateTriplet(dict, key);
+                triplet.InfoElPath = elFile;
 
-                // Find Marked TIF (prefer different tif file)
-                string markedTif = tifFiles.FirstOrDefault(f => !f.Equals(rawTif, StringComparison.OrdinalIgnoreCase)) ?? rawTif;
+                var raw = tifFiles.FirstOrDefault(f => Path.GetFileName(f).EndsWith(".1.tif", StringComparison.OrdinalIgnoreCase)) ?? tifFiles[0];
+                var marked = tifFiles.FirstOrDefault(f => f != raw) ?? tifFiles[1];
 
-                resultTriplets.Add(new PanelTriplet
-                {
-                    CommonKey = key,
-                    InfoElPath = elFile,
-                    RawTifPath = rawTif,
-                    MarkedTifPath = markedTif
-                });
-            }
-            // Case B: Multiple .el files in the same directory -> Group by numeric key or prefix
-            else
-            {
-                foreach (var elFile in elFiles)
-                {
-                    string elNameNoExt = Path.GetFileNameWithoutExtension(elFile);
-                    var match = Regex.Match(elNameNoExt, @"(\d{1,10})");
-                    string key = match.Success ? match.Groups[1].Value : elNameNoExt;
-
-                    var matchingTifs = tifFiles.Where(f => f.Contains(key, StringComparison.OrdinalIgnoreCase)).ToList();
-                    if (matchingTifs.Count == 0) matchingTifs = tifFiles;
-
-                    string rawTif = matchingTifs.FirstOrDefault(f => 
-                        Regex.IsMatch(Path.GetFileName(f), @"[\._]1\.tif$", RegexOptions.IgnoreCase) || 
-                        Path.GetFileName(f).StartsWith("row", StringComparison.OrdinalIgnoreCase) || 
-                        Path.GetFileName(f).StartsWith("raw", StringComparison.OrdinalIgnoreCase)
-                    ) ?? matchingTifs[0];
-
-                    string markedTif = matchingTifs.FirstOrDefault(f => !f.Equals(rawTif, StringComparison.OrdinalIgnoreCase)) ?? rawTif;
-
-                    resultTriplets.Add(new PanelTriplet
-                    {
-                        CommonKey = key,
-                        InfoElPath = elFile,
-                        RawTifPath = rawTif,
-                        MarkedTifPath = markedTif
-                    });
-                }
+                triplet.RawTifPath = raw;
+                triplet.MarkedTifPath = marked;
             }
         }
 
-        return resultTriplets.GroupBy(t => t.InfoElPath, StringComparer.OrdinalIgnoreCase)
-                             .Select(g => g.First())
-                             .ToList();
+        return dict.Values.ToList();
     }
 
     private PanelTriplet GetOrCreateTriplet(Dictionary<string, PanelTriplet> dict, string key)
