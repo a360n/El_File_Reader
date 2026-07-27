@@ -295,18 +295,24 @@ public class FileRestructurerService
 
         int organizedCount = 0;
 
-        // Pass A: Check if container contains pre-structured panel folders (folders containing info.el)
-        foreach (var dir in Directory.GetDirectories(_containerPath))
+        // Pass A: Check if container or any subfolder contains pre-structured panel folders (folders containing info.el)
+        try
         {
-            string infoEl = Path.Combine(dir, "info.el");
-            if (File.Exists(infoEl))
+            var allSubDirs = Directory.GetDirectories(_containerPath, "*", SearchOption.AllDirectories);
+            foreach (var dir in allSubDirs)
             {
-                string folderName = Path.GetFileName(dir);
-                string targetDir = Path.Combine(_restructuredPath, folderName);
-                SafeMoveDirectory(dir, targetDir);
-                organizedCount++;
+                if (!Directory.Exists(dir)) continue;
+                string infoEl = Path.Combine(dir, "info.el");
+                if (File.Exists(infoEl))
+                {
+                    string folderName = Path.GetFileName(dir);
+                    string targetDir = Path.Combine(_restructuredPath, folderName);
+                    SafeMoveDirectory(dir, targetDir);
+                    organizedCount++;
+                }
             }
         }
+        catch { }
 
         // Pass B: Scan all remaining loose files inside container/
         var allFiles = Directory.GetFiles(_containerPath, "*.*", SearchOption.AllDirectories)
@@ -325,7 +331,7 @@ public class FileRestructurerService
 
         foreach (var triplet in triplets)
         {
-            if (!triplet.IsComplete)
+            if (string.IsNullOrEmpty(triplet.InfoElPath) || string.IsNullOrEmpty(triplet.RawTifPath))
             {
                 continue;
             }
@@ -388,79 +394,61 @@ public class FileRestructurerService
 
     private List<PanelTriplet> MatchTriplets(List<string> filePaths)
     {
-        var dict = new Dictionary<string, PanelTriplet>(StringComparer.OrdinalIgnoreCase);
+        var resultTriplets = new List<PanelTriplet>();
 
-        foreach (var filePath in filePaths)
+        var directoryGroups = filePaths.GroupBy(Path.GetDirectoryName);
+
+        foreach (var group in directoryGroups)
         {
-            string fileName = Path.GetFileName(filePath);
-            string fileNameNoExt = Path.GetFileNameWithoutExtension(filePath);
-
-            if (fileNameNoExt.EndsWith(".1", StringComparison.OrdinalIgnoreCase))
-            {
-                fileNameNoExt = fileNameNoExt.Substring(0, fileNameNoExt.Length - 2);
-            }
-
-            // Match any 1-10 digits or fallback to exact filename base
-            var digitMatch = Regex.Match(fileNameNoExt, @"(\d{1,10})");
-            string key = digitMatch.Success ? digitMatch.Groups[1].Value : fileNameNoExt;
-
-            string dirName = Path.GetDirectoryName(filePath) ?? "";
-            string fullKey = dirName.Equals(_containerPath, StringComparison.OrdinalIgnoreCase)
-                ? key
-                : $"{Path.GetFileName(dirName)}_{key}";
-
-            var triplet = GetOrCreateTriplet(dict, fullKey);
-
-            if (fileName.EndsWith(".el", StringComparison.OrdinalIgnoreCase))
-            {
-                triplet.InfoElPath = filePath;
-            }
-            else if (Regex.IsMatch(fileName, @"\.1\.tif$", RegexOptions.IgnoreCase) || Regex.IsMatch(fileName, @"_1\.tif$", RegexOptions.IgnoreCase))
-            {
-                triplet.RawTifPath = filePath;
-            }
-            else if (fileName.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
-            {
-                if (string.IsNullOrEmpty(triplet.RawTifPath))
-                {
-                    triplet.RawTifPath = filePath;
-                }
-                else
-                {
-                    triplet.MarkedTifPath = filePath;
-                }
-            }
-        }
-
-        // Subfolder Fallback Strategy
-        var subfolders = filePaths.Select(Path.GetDirectoryName)
-                                  .Distinct()
-                                  .Where(d => !string.IsNullOrEmpty(d) && !d.Equals(_containerPath, StringComparison.OrdinalIgnoreCase))
-                                  .ToList();
-
-        foreach (var subDir in subfolders)
-        {
-            var dirFiles = filePaths.Where(f => Path.GetDirectoryName(f) == subDir).ToList();
+            var dirFiles = group.ToList();
             var elFiles = dirFiles.Where(f => f.EndsWith(".el", StringComparison.OrdinalIgnoreCase)).ToList();
             var tifFiles = dirFiles.Where(f => f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (elFiles.Count == 1 && tifFiles.Count >= 2)
+            if (elFiles.Count > 0 && tifFiles.Count > 0)
             {
-                string elFile = elFiles[0];
-                string key = Path.GetFileNameWithoutExtension(elFile);
+                var keysInDir = dirFiles.Select(f => {
+                    string nameNoExt = Path.GetFileNameWithoutExtension(f);
+                    if (nameNoExt.EndsWith(".1", StringComparison.OrdinalIgnoreCase))
+                        nameNoExt = nameNoExt.Substring(0, nameNoExt.Length - 2);
+                    var match = Regex.Match(nameNoExt, @"(\d{1,10})");
+                    return match.Success ? match.Groups[1].Value : nameNoExt;
+                }).Distinct().ToList();
 
-                var triplet = GetOrCreateTriplet(dict, key);
-                triplet.InfoElPath = elFile;
+                foreach (var key in keysInDir)
+                {
+                    var matchingEls = elFiles.Where(f => f.Contains(key, StringComparison.OrdinalIgnoreCase)).ToList();
+                    var matchingTifs = tifFiles.Where(f => f.Contains(key, StringComparison.OrdinalIgnoreCase)).ToList();
 
-                var raw = tifFiles.FirstOrDefault(f => Path.GetFileName(f).EndsWith(".1.tif", StringComparison.OrdinalIgnoreCase) || Path.GetFileName(f).Equals("row.tif", StringComparison.OrdinalIgnoreCase)) ?? tifFiles[0];
-                var marked = tifFiles.FirstOrDefault(f => f != raw) ?? tifFiles[1];
+                    if (matchingEls.Count == 0) matchingEls = elFiles;
+                    if (matchingTifs.Count == 0) matchingTifs = tifFiles;
 
-                triplet.RawTifPath = raw;
-                triplet.MarkedTifPath = marked;
+                    if (matchingEls.Count > 0 && matchingTifs.Count > 0)
+                    {
+                        string elFile = matchingEls[0];
+                        
+                        string? rawTif = matchingTifs.FirstOrDefault(f => 
+                            Regex.IsMatch(Path.GetFileName(f), @"[\._]1\.tif$", RegexOptions.IgnoreCase) || 
+                            Path.GetFileName(f).StartsWith("row", StringComparison.OrdinalIgnoreCase) || 
+                            Path.GetFileName(f).StartsWith("raw", StringComparison.OrdinalIgnoreCase)
+                        ) ?? matchingTifs[0];
+
+                        string markedTif = matchingTifs.FirstOrDefault(f => !f.Equals(rawTif, StringComparison.OrdinalIgnoreCase)) ?? rawTif;
+
+                        resultTriplets.Add(new PanelTriplet
+                        {
+                            CommonKey = key,
+                            InfoElPath = elFile,
+                            RawTifPath = rawTif,
+                            MarkedTifPath = markedTif
+                        });
+                    }
+                }
             }
         }
 
-        return dict.Values.ToList();
+        return resultTriplets.GroupBy(t => t.InfoElPath, StringComparer.OrdinalIgnoreCase)
+                             .Select(g => g.First())
+                             .ToList();
     }
 
     private PanelTriplet GetOrCreateTriplet(Dictionary<string, PanelTriplet> dict, string key)
