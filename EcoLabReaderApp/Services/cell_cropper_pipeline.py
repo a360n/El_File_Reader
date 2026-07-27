@@ -233,17 +233,11 @@ def process_panel_folder(folder_path, is_good_model, restructured_base, aicell_b
 
                 cell_crop = padded_rectified[py1:py2, px1:px2]
 
-                # Preserve exact natural rectangular aspect ratio of the solar cell
-                ch, cw = cell_crop.shape[:2]
-                if ch > 0 and cw > 0:
-                    target_h = 300
-                    target_w = max(1, int(round(cw * (target_h / float(ch)))))
-                    cell_to_save = cv2.resize(cell_crop, (target_w, target_h), interpolation=cv2.INTER_AREA)
-                else:
-                    cell_to_save = cell_crop
+                # Resize to standard uniform dimension (224x224)
+                resized_cell = cv2.resize(cell_crop, (224, 224), interpolation=cv2.INTER_AREA)
 
-                # Save cropped cell with true rectangular shape
-                cv2.imwrite(cell_path_in_panel, cell_to_save)
+                # Save cropped cell
+                cv2.imwrite(cell_path_in_panel, resized_cell)
 
             # Copy to panel's 'defective single cells' folder if defective
             if is_defective:
@@ -278,37 +272,8 @@ def run_pipeline(restructured_path, aicell_path):
     aicell_good_models = os.path.join(aicell_path, "Good_models")
     aicell_bad_models = os.path.join(aicell_path, "bad_models")
 
-    os.makedirs(good_models_dir, exist_ok=True)
-    os.makedirs(bad_models_dir, exist_ok=True)
     os.makedirs(aicell_good_models, exist_ok=True)
     os.makedirs(aicell_bad_models, exist_ok=True)
-
-    # Auto-Restore: Move any panel folders previously moved into AICell back into Restructured
-    for src_m, dst_m in [(aicell_good_models, good_models_dir), (aicell_bad_models, bad_models_dir)]:
-        if os.path.exists(src_m):
-            for item in os.listdir(src_m):
-                src_item = os.path.join(src_m, item)
-                if os.path.isdir(src_item) and item not in ["all_good_cells", "all_bad_cells"]:
-                    # Remove old single cells subfolders inside panel folder to force fresh rectangular cropping
-                    for old_sub in ["all single cells", "defective single cells"]:
-                        old_p = os.path.join(src_item, old_sub)
-                        if os.path.exists(old_p):
-                            shutil.rmtree(old_p, ignore_errors=True)
-
-                    dst_item = os.path.join(dst_m, item)
-                    if os.path.exists(dst_item):
-                        shutil.rmtree(dst_item, ignore_errors=True)
-                    shutil.move(src_item, dst_item)
-
-    # Purge old global cell aggregation folders
-    for old_global in [
-        os.path.join(good_models_dir, "all_good_cells"),
-        os.path.join(bad_models_dir, "all_bad_cells"),
-        os.path.join(aicell_path, "all_good_cells"),
-        os.path.join(aicell_path, "all_bad_cells")
-    ]:
-        if os.path.exists(old_global):
-            shutil.rmtree(old_global, ignore_errors=True)
 
     results = []
 
