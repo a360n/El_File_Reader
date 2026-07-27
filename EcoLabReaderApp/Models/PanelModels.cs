@@ -8,8 +8,7 @@ public class PanelTriplet
     public string MarkedTifPath { get; set; } = string.Empty;
 
     public bool IsComplete => !string.IsNullOrEmpty(RawTifPath) &&
-                              !string.IsNullOrEmpty(InfoElPath) &&
-                              !string.IsNullOrEmpty(MarkedTifPath);
+                              !string.IsNullOrEmpty(InfoElPath);
 }
 
 public class ElPanelInfo

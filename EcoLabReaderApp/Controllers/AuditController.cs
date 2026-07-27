@@ -211,17 +211,20 @@ public class AuditController : Controller
     }
 
     [HttpGet]
-    public IActionResult Image(string folderName, string type)
+    public IActionResult Image(string folderName)
     {
         if (string.IsNullOrEmpty(folderName)) return NotFound();
 
-        string fileName = type?.ToLower() == "marked" ? "marked.tif" : "row.tif";
         string? folderPath = _restructurer.FindPanelFolderPath(folderName);
         if (folderPath == null) return NotFound();
 
-        string tiffPath = System.IO.Path.Combine(folderPath, fileName);
-
-        if (!System.IO.File.Exists(tiffPath)) return NotFound();
+        string tiffPath = System.IO.Path.Combine(folderPath, "row.tif");
+        if (!System.IO.File.Exists(tiffPath))
+        {
+            var tifFiles = System.IO.Directory.GetFiles(folderPath, "*.tif");
+            if (tifFiles.Length > 0) tiffPath = tifFiles[0];
+            else return NotFound();
+        }
 
         var (imageBytes, contentType) = _imageService.ConvertTiffToImageBytes(tiffPath);
         if (imageBytes == null) return NotFound();

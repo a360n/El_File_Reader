@@ -31,18 +31,6 @@ public class ElParserService
         }
         else
         {
-            // Extract from marked.tif in folder if exists
-            string markedPath = Path.Combine(result.FolderPath, "marked.tif");
-            if (File.Exists(markedPath))
-            {
-                var markedName = Path.GetFileName(markedPath);
-                var fnMatch = Regex.Match(markedName, @"^(ANM[A-Z0-9_-]+)");
-                if (fnMatch.Success)
-                {
-                    result.SerialNumber = fnMatch.Value;
-                }
-            }
-
             if (string.IsNullOrEmpty(result.SerialNumber))
             {
                 result.SerialNumber = $"ID-{folderName}";

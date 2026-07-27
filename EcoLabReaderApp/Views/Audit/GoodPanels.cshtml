@@ -62,16 +62,12 @@
 
             <!-- Two Images Side by Side -->
             <div class="row g-3">
-                <div class="col-md-6">
-                    <div class="img-container">
-                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark opacity-75">row.tif (الصورة الخام)</span>
-                        <img src="/Audit/Image?folderName=@Model.FolderName&type=row" alt="Raw Tiff Image" id="imgRaw" />
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="img-container">
-                        <span class="position-absolute top-0 start-0 m-2 badge bg-success opacity-75">marked.tif (المؤشرة)</span>
-                        <img src="/Audit/Image?folderName=@Model.FolderName&type=marked" alt="Marked Tiff Image" id="imgMarked" />
+            <!-- Single Full-Width Image Container -->
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <div class="img-container" style="height: 480px;">
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-success opacity-75 fs-6"><i class="fa-solid fa-image me-1"></i>رؤية اللوح الشمسي السليم (row.tif)</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName" alt="Solar Panel Image" id="imgRaw" />
                     </div>
                 </div>
             </div>

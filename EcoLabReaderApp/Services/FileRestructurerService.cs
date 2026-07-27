@@ -314,12 +314,10 @@ public class FileRestructurerService
                 // Target paths
                 string targetRawTif = Path.Combine(targetFolder, "row.tif");
                 string targetInfoEl = Path.Combine(targetFolder, "info.el");
-                string targetMarkedTif = Path.Combine(targetFolder, "marked.tif");
 
                 // Move files atomically & instantly (0 extra space required)
                 SafeMoveFile(triplet.RawTifPath, targetRawTif);
                 SafeMoveFile(triplet.InfoElPath, targetInfoEl);
-                SafeMoveFile(triplet.MarkedTifPath, targetMarkedTif);
 
                 organizedCount++;
             }
@@ -376,13 +374,9 @@ public class FileRestructurerService
             {
                 triplet.InfoElPath = filePath;
             }
-            else if (Regex.IsMatch(fileName, @"\.1\.tif$", RegexOptions.IgnoreCase) || Regex.IsMatch(fileName, @"_1\.tif$", RegexOptions.IgnoreCase))
-            {
-                triplet.RawTifPath = filePath;
-            }
             else if (fileName.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || fileName.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase))
             {
-                triplet.MarkedTifPath = filePath;
+                triplet.RawTifPath = filePath;
             }
         }
 
@@ -398,19 +392,14 @@ public class FileRestructurerService
             var elFiles = dirFiles.Where(f => f.EndsWith(".el", StringComparison.OrdinalIgnoreCase)).ToList();
             var tifFiles = dirFiles.Where(f => f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (elFiles.Count == 1 && tifFiles.Count == 2)
+            if (elFiles.Count >= 1 && tifFiles.Count >= 1)
             {
                 string elFile = elFiles[0];
                 string key = Path.GetFileNameWithoutExtension(elFile);
 
                 var triplet = GetOrCreateTriplet(dict, key);
                 triplet.InfoElPath = elFile;
-
-                var raw = tifFiles.FirstOrDefault(f => Path.GetFileName(f).EndsWith(".1.tif", StringComparison.OrdinalIgnoreCase)) ?? tifFiles[0];
-                var marked = tifFiles.FirstOrDefault(f => f != raw) ?? tifFiles[1];
-
-                triplet.RawTifPath = raw;
-                triplet.MarkedTifPath = marked;
+                triplet.RawTifPath = tifFiles[0];
             }
         }
 
