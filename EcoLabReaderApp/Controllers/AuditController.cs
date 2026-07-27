@@ -28,8 +28,10 @@ public class AuditController : Controller
 
     public IActionResult Index(int panelIndex = 0)
     {
-        // Run container restructuring + automatic model partitioning into Good_models & bad_models
-        _restructurer.RunFullRestructuringAndPartitioning(_parser);
+        if (_restructurer.HasFilesToProcess())
+        {
+            _restructurer.RunFullRestructuringAndPartitioning(_parser);
+        }
 
         var folders = GetRestructuredFolders();
 
@@ -61,84 +63,76 @@ public class AuditController : Controller
 
     public IActionResult GoodPanels(int panelIndex = 0)
     {
-        _restructurer.RunFullRestructuringAndPartitioning(_parser);
-        var allFolders = GetRestructuredFolders();
-
-        var goodList = new List<(string Folder, ElPanelInfo Info)>();
-
-        foreach (var folder in allFolders)
+        if (_restructurer.HasFilesToProcess())
         {
-            string infoElPath = System.IO.Path.Combine(folder, "info.el");
-            string folderName = System.IO.Path.GetFileName(folder);
-            var info = _parser.ParseElFile(infoElPath, folderName);
-
-            if (!info.IsDefective && info.Defects.Count == 0)
-            {
-                goodList.Add((folder, info));
-            }
+            _restructurer.RunFullRestructuringAndPartitioning(_parser);
         }
 
-        if (goodList.Count == 0)
+        string goodPath = _restructurer.GoodModelsPath;
+        var goodFolders = System.IO.Directory.Exists(goodPath)
+            ? System.IO.Directory.GetDirectories(goodPath).OrderBy(d => System.IO.Path.GetFileName(d)).ToList()
+            : new List<string>();
+
+        if (goodFolders.Count == 0)
         {
-            ViewBag.Message = "لا توجد أية ألواح سليمة نموذجية حالياً في مجلدات الفحص.";
+            ViewBag.Message = "لا توجد أية ألواح سليمة نموذجية حالياً في مجلدات الفحص (Good_models).";
             return View("EmptyState");
         }
 
         if (panelIndex < 0) panelIndex = 0;
-        if (panelIndex >= goodList.Count) panelIndex = goodList.Count - 1;
+        if (panelIndex >= goodFolders.Count) panelIndex = goodFolders.Count - 1;
 
-        var currentItem = goodList[panelIndex];
-        var existingRecord = _auditStorage.GetRecord(currentItem.Info.FolderName);
+        string currentFolder = goodFolders[panelIndex];
+        string infoElPath = System.IO.Path.Combine(currentFolder, "info.el");
+        string folderName = System.IO.Path.GetFileName(currentFolder);
+
+        var elInfo = _parser.ParseElFile(infoElPath, folderName);
+        var existingRecord = _auditStorage.GetRecord(folderName);
 
         ViewBag.CurrentIndex = panelIndex;
-        ViewBag.TotalGoodPanels = goodList.Count;
+        ViewBag.TotalGoodPanels = goodFolders.Count;
         ViewBag.HasPrevious = panelIndex > 0;
-        ViewBag.HasNext = panelIndex < goodList.Count - 1;
+        ViewBag.HasNext = panelIndex < goodFolders.Count - 1;
         ViewBag.ExistingRecord = existingRecord;
 
-        return View("GoodPanels", currentItem.Info);
+        return View("GoodPanels", elInfo);
     }
 
     public IActionResult DefectivePanels(int panelIndex = 0)
     {
-        _restructurer.RunFullRestructuringAndPartitioning(_parser);
-        var allFolders = GetRestructuredFolders();
-
-        var defectiveList = new List<(string Folder, ElPanelInfo Info)>();
-        int totalDefectiveCellsCount = 0;
-
-        foreach (var folder in allFolders)
+        if (_restructurer.HasFilesToProcess())
         {
-            string infoElPath = System.IO.Path.Combine(folder, "info.el");
-            string folderName = System.IO.Path.GetFileName(folder);
-            var info = _parser.ParseElFile(infoElPath, folderName);
-
-            if (info.IsDefective || info.Defects.Count > 0)
-            {
-                defectiveList.Add((folder, info));
-                totalDefectiveCellsCount += info.Defects.Count;
-            }
+            _restructurer.RunFullRestructuringAndPartitioning(_parser);
         }
 
-        if (defectiveList.Count == 0)
+        string badPath = _restructurer.BadModelsPath;
+        var defectiveFolders = System.IO.Directory.Exists(badPath)
+            ? System.IO.Directory.GetDirectories(badPath).OrderBy(d => System.IO.Path.GetFileName(d)).ToList()
+            : new List<string>();
+
+        if (defectiveFolders.Count == 0)
         {
             return View("NoDefectsState");
         }
 
         if (panelIndex < 0) panelIndex = 0;
-        if (panelIndex >= defectiveList.Count) panelIndex = defectiveList.Count - 1;
+        if (panelIndex >= defectiveFolders.Count) panelIndex = defectiveFolders.Count - 1;
 
-        var currentItem = defectiveList[panelIndex];
-        var existingRecord = _auditStorage.GetRecord(currentItem.Info.FolderName);
+        string currentFolder = defectiveFolders[panelIndex];
+        string infoElPath = System.IO.Path.Combine(currentFolder, "info.el");
+        string folderName = System.IO.Path.GetFileName(currentFolder);
+
+        var elInfo = _parser.ParseElFile(infoElPath, folderName);
+        var existingRecord = _auditStorage.GetRecord(folderName);
 
         ViewBag.CurrentIndex = panelIndex;
-        ViewBag.TotalDefectivePanels = defectiveList.Count;
-        ViewBag.TotalDefectiveCells = totalDefectiveCellsCount;
+        ViewBag.TotalDefectivePanels = defectiveFolders.Count;
+        ViewBag.TotalDefectiveCells = 0; // Loaded on demand
         ViewBag.HasPrevious = panelIndex > 0;
-        ViewBag.HasNext = panelIndex < defectiveList.Count - 1;
+        ViewBag.HasNext = panelIndex < defectiveFolders.Count - 1;
         ViewBag.ExistingRecord = existingRecord;
 
-        return View("DefectivePanels", currentItem.Info);
+        return View("DefectivePanels", elInfo);
     }
 
     [HttpPost]

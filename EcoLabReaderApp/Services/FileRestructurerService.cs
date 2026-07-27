@@ -161,18 +161,25 @@ public class FileRestructurerService
         }
     }
 
+    public bool HasFilesToProcess()
+    {
+        if (!Directory.Exists(_containerPath)) return false;
+        return Directory.EnumerateFileSystemEntries(_containerPath).Any();
+    }
+
     public int RunFullRestructuringAndPartitioning(ElParserService parser)
     {
-        // Step 1: Process & restructure any raw triplets from container/ into Restructured/
-        int organizedCount = RunRestructuring();
-
-        // Step 2: Ensure Good_models and bad_models exist inside Restructured/
         EnsureDirectoriesExist();
 
-        // Step 3: Scan all panel folders inside Restructured/ (root, Good_models, bad_models)
-        var allFolderPaths = new List<string>();
+        // Only run restructuring if container has files
+        int organizedCount = 0;
+        if (HasFilesToProcess())
+        {
+            organizedCount = RunRestructuring();
+        }
 
-        // Root Restructured/ folders (excluding reserved folders)
+        // Scan ONLY unpartitioned root Restructured/ folders
+        var unpartitionedFolders = new List<string>();
         foreach (var dir in Directory.GetDirectories(_restructuredPath))
         {
             string name = Path.GetFileName(dir);
@@ -183,28 +190,11 @@ public class FileRestructurerService
             {
                 continue;
             }
-            allFolderPaths.Add(dir);
+            unpartitionedFolders.Add(dir);
         }
 
-        // Also check if any existing folders inside Good_models or bad_models need checking
-        if (Directory.Exists(_goodModelsPath))
-        {
-            foreach (var dir in Directory.GetDirectories(_goodModelsPath))
-            {
-                allFolderPaths.Add(dir);
-            }
-        }
-
-        if (Directory.Exists(_badModelsPath))
-        {
-            foreach (var dir in Directory.GetDirectories(_badModelsPath))
-            {
-                allFolderPaths.Add(dir);
-            }
-        }
-
-        // Distribute / Partition panel folders based on info.el defect analysis
-        foreach (var panelFolder in allFolderPaths)
+        // Partition ONLY new unpartitioned panel folders
+        foreach (var panelFolder in unpartitionedFolders)
         {
             string infoElPath = Path.Combine(panelFolder, "info.el");
             if (!File.Exists(infoElPath)) continue;
@@ -215,11 +205,7 @@ public class FileRestructurerService
             string targetParentDir = (info.IsDefective || info.Defects.Count > 0) ? _badModelsPath : _goodModelsPath;
             string targetPath = Path.Combine(targetParentDir, folderName);
 
-            // Move only if not already in the target path
-            if (!Path.GetFullPath(panelFolder).Equals(Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
-            {
-                SafeMoveDirectory(panelFolder, targetPath);
-            }
+            SafeMoveDirectory(panelFolder, targetPath);
         }
 
         return organizedCount;
