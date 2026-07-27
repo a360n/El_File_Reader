@@ -233,11 +233,17 @@ def process_panel_folder(folder_path, is_good_model, restructured_base, aicell_b
 
                 cell_crop = padded_rectified[py1:py2, px1:px2]
 
-                # Resize to standard uniform dimension (224x224)
-                resized_cell = cv2.resize(cell_crop, (224, 224), interpolation=cv2.INTER_AREA)
+                # Preserve exact natural rectangular aspect ratio of the solar cell
+                ch, cw = cell_crop.shape[:2]
+                if ch > 0 and cw > 0:
+                    target_h = 300
+                    target_w = max(1, int(round(cw * (target_h / float(ch)))))
+                    cell_to_save = cv2.resize(cell_crop, (target_w, target_h), interpolation=cv2.INTER_AREA)
+                else:
+                    cell_to_save = cell_crop
 
-                # Save cropped cell
-                cv2.imwrite(cell_path_in_panel, resized_cell)
+                # Save cropped cell with true rectangular shape
+                cv2.imwrite(cell_path_in_panel, cell_to_save)
 
             # Copy to panel's 'defective single cells' folder if defective
             if is_defective:
