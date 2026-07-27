@@ -395,7 +395,6 @@ public class FileRestructurerService
     private List<PanelTriplet> MatchTriplets(List<string> filePaths)
     {
         var resultTriplets = new List<PanelTriplet>();
-
         var directoryGroups = filePaths.GroupBy(Path.GetDirectoryName);
 
         foreach (var group in directoryGroups)
@@ -404,44 +403,59 @@ public class FileRestructurerService
             var elFiles = dirFiles.Where(f => f.EndsWith(".el", StringComparison.OrdinalIgnoreCase)).ToList();
             var tifFiles = dirFiles.Where(f => f.EndsWith(".tif", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".tiff", StringComparison.OrdinalIgnoreCase)).ToList();
 
-            if (elFiles.Count > 0 && tifFiles.Count > 0)
+            if (elFiles.Count == 0 || tifFiles.Count == 0) continue;
+
+            // Case A: 1 .el file in this directory -> ALL tif files in this directory belong to this .el file!
+            if (elFiles.Count == 1)
             {
-                var keysInDir = dirFiles.Select(f => {
-                    string nameNoExt = Path.GetFileNameWithoutExtension(f);
-                    if (nameNoExt.EndsWith(".1", StringComparison.OrdinalIgnoreCase))
-                        nameNoExt = nameNoExt.Substring(0, nameNoExt.Length - 2);
-                    var match = Regex.Match(nameNoExt, @"(\d{1,10})");
-                    return match.Success ? match.Groups[1].Value : nameNoExt;
-                }).Distinct().ToList();
+                string elFile = elFiles[0];
+                string key = Path.GetFileNameWithoutExtension(elFile);
 
-                foreach (var key in keysInDir)
+                // Find RAW TIF (prefer .1.tif, _1.tif, row.tif, raw.tif)
+                string rawTif = tifFiles.FirstOrDefault(f => 
+                    Regex.IsMatch(Path.GetFileName(f), @"[\._]1\.tif$", RegexOptions.IgnoreCase) || 
+                    Path.GetFileName(f).StartsWith("row", StringComparison.OrdinalIgnoreCase) || 
+                    Path.GetFileName(f).StartsWith("raw", StringComparison.OrdinalIgnoreCase)
+                ) ?? tifFiles[0];
+
+                // Find Marked TIF (prefer different tif file)
+                string markedTif = tifFiles.FirstOrDefault(f => !f.Equals(rawTif, StringComparison.OrdinalIgnoreCase)) ?? rawTif;
+
+                resultTriplets.Add(new PanelTriplet
                 {
-                    var matchingEls = elFiles.Where(f => f.Contains(key, StringComparison.OrdinalIgnoreCase)).ToList();
-                    var matchingTifs = tifFiles.Where(f => f.Contains(key, StringComparison.OrdinalIgnoreCase)).ToList();
+                    CommonKey = key,
+                    InfoElPath = elFile,
+                    RawTifPath = rawTif,
+                    MarkedTifPath = markedTif
+                });
+            }
+            // Case B: Multiple .el files in the same directory -> Group by numeric key or prefix
+            else
+            {
+                foreach (var elFile in elFiles)
+                {
+                    string elNameNoExt = Path.GetFileNameWithoutExtension(elFile);
+                    var match = Regex.Match(elNameNoExt, @"(\d{1,10})");
+                    string key = match.Success ? match.Groups[1].Value : elNameNoExt;
 
-                    if (matchingEls.Count == 0) matchingEls = elFiles;
+                    var matchingTifs = tifFiles.Where(f => f.Contains(key, StringComparison.OrdinalIgnoreCase)).ToList();
                     if (matchingTifs.Count == 0) matchingTifs = tifFiles;
 
-                    if (matchingEls.Count > 0 && matchingTifs.Count > 0)
+                    string rawTif = matchingTifs.FirstOrDefault(f => 
+                        Regex.IsMatch(Path.GetFileName(f), @"[\._]1\.tif$", RegexOptions.IgnoreCase) || 
+                        Path.GetFileName(f).StartsWith("row", StringComparison.OrdinalIgnoreCase) || 
+                        Path.GetFileName(f).StartsWith("raw", StringComparison.OrdinalIgnoreCase)
+                    ) ?? matchingTifs[0];
+
+                    string markedTif = matchingTifs.FirstOrDefault(f => !f.Equals(rawTif, StringComparison.OrdinalIgnoreCase)) ?? rawTif;
+
+                    resultTriplets.Add(new PanelTriplet
                     {
-                        string elFile = matchingEls[0];
-                        
-                        string? rawTif = matchingTifs.FirstOrDefault(f => 
-                            Regex.IsMatch(Path.GetFileName(f), @"[\._]1\.tif$", RegexOptions.IgnoreCase) || 
-                            Path.GetFileName(f).StartsWith("row", StringComparison.OrdinalIgnoreCase) || 
-                            Path.GetFileName(f).StartsWith("raw", StringComparison.OrdinalIgnoreCase)
-                        ) ?? matchingTifs[0];
-
-                        string markedTif = matchingTifs.FirstOrDefault(f => !f.Equals(rawTif, StringComparison.OrdinalIgnoreCase)) ?? rawTif;
-
-                        resultTriplets.Add(new PanelTriplet
-                        {
-                            CommonKey = key,
-                            InfoElPath = elFile,
-                            RawTifPath = rawTif,
-                            MarkedTifPath = markedTif
-                        });
-                    }
+                        CommonKey = key,
+                        InfoElPath = elFile,
+                        RawTifPath = rawTif,
+                        MarkedTifPath = markedTif
+                    });
                 }
             }
         }
