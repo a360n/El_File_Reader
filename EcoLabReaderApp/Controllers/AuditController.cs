@@ -115,6 +115,18 @@ public class AuditController : Controller
             return View("NoDefectsState");
         }
 
+        int totalDefectiveCellsCount = 0;
+        foreach (var folder in defectiveFolders)
+        {
+            string infoPath = System.IO.Path.Combine(folder, "info.el");
+            if (System.IO.File.Exists(infoPath))
+            {
+                string fName = System.IO.Path.GetFileName(folder);
+                var info = _parser.ParseElFile(infoPath, fName);
+                totalDefectiveCellsCount += info.Defects.Count;
+            }
+        }
+
         if (panelIndex < 0) panelIndex = 0;
         if (panelIndex >= defectiveFolders.Count) panelIndex = defectiveFolders.Count - 1;
 
@@ -127,7 +139,7 @@ public class AuditController : Controller
 
         ViewBag.CurrentIndex = panelIndex;
         ViewBag.TotalDefectivePanels = defectiveFolders.Count;
-        ViewBag.TotalDefectiveCells = 0; // Loaded on demand
+        ViewBag.TotalDefectiveCells = totalDefectiveCellsCount;
         ViewBag.HasPrevious = panelIndex > 0;
         ViewBag.HasNext = panelIndex < defectiveFolders.Count - 1;
         ViewBag.ExistingRecord = existingRecord;
