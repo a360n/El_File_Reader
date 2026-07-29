@@ -16,6 +16,9 @@ def fix_nested_folders(folder_path):
     removed_count = 0
 
     for d in list(direct_dirs):
+        if d.lower() in ["good_models", "bad_models", "re_evaluation", "useless"]:
+            continue
+
         parent_dir = os.path.join(folder_path, d)
         
         try:

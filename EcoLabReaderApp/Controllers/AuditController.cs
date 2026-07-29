@@ -28,7 +28,7 @@ public class AuditController : Controller
 
     public IActionResult Index(int panelIndex = 0)
     {
-        if (_restructurer.HasFilesToProcess())
+        if (_restructurer.HasFilesToProcess() || _restructurer.HasUnpartitionedFolders())
         {
             _restructurer.RunFullRestructuringAndPartitioning(_parser);
         }
@@ -63,7 +63,7 @@ public class AuditController : Controller
 
     public IActionResult GoodPanels(int panelIndex = 0)
     {
-        if (_restructurer.HasFilesToProcess())
+        if (_restructurer.HasFilesToProcess() || _restructurer.HasUnpartitionedFolders())
         {
             _restructurer.RunFullRestructuringAndPartitioning(_parser);
         }
@@ -100,7 +100,7 @@ public class AuditController : Controller
 
     public IActionResult DefectivePanels(int panelIndex = 0)
     {
-        if (_restructurer.HasFilesToProcess())
+        if (_restructurer.HasFilesToProcess() || _restructurer.HasUnpartitionedFolders())
         {
             _restructurer.RunFullRestructuringAndPartitioning(_parser);
         }

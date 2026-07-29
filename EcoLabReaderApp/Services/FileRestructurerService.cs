@@ -60,9 +60,23 @@ public class FileRestructurerService
 
         FlattenNestedDirectories(_reEvaluationPath);
         FlattenNestedDirectories(_uselessPath);
-        FlattenNestedDirectories(_goodModelsPath);
-        FlattenNestedDirectories(_badModelsPath);
-        FlattenNestedDirectories(_restructuredPath);
+    }
+
+    public bool HasUnpartitionedFolders()
+    {
+        if (!Directory.Exists(_restructuredPath)) return false;
+        foreach (var dir in Directory.GetDirectories(_restructuredPath))
+        {
+            string name = Path.GetFileName(dir);
+            if (!name.Equals("Good_models", StringComparison.OrdinalIgnoreCase) &&
+                !name.Equals("bad_models", StringComparison.OrdinalIgnoreCase) &&
+                !name.Equals("Re_evaluation", StringComparison.OrdinalIgnoreCase) &&
+                !name.Equals("Useless", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void FlattenNestedDirectories(string basePath)
@@ -75,6 +89,15 @@ public class FileRestructurerService
             foreach (var topDir in topDirs)
             {
                 if (!Directory.Exists(topDir)) continue;
+
+                string topName = Path.GetFileName(topDir);
+                if (topName.Equals("Good_models", StringComparison.OrdinalIgnoreCase) ||
+                    topName.Equals("bad_models", StringComparison.OrdinalIgnoreCase) ||
+                    topName.Equals("Re_evaluation", StringComparison.OrdinalIgnoreCase) ||
+                    topName.Equals("Useless", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
 
                 var subDirs = Directory.GetDirectories(topDir).ToList();
                 foreach (var subDir in subDirs)
