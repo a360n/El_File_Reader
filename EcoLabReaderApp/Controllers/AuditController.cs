@@ -348,9 +348,15 @@ public class AuditController : Controller
 
             if (!System.IO.Directory.Exists(categoryPath)) continue;
 
-            foreach (var dir in System.IO.Directory.GetDirectories(categoryPath))
+            var dirList = System.IO.Directory.GetDirectories(categoryPath)
+                .OrderBy(d => System.IO.Path.GetFileName(d))
+                .ToList();
+
+            for (int i = 0; i < dirList.Count; i++)
             {
+                string dir = dirList[i];
                 string dirName = System.IO.Path.GetFileName(dir);
+
                 if (categoryName.Contains("Root") && (
                     dirName.Equals("Good_models", StringComparison.OrdinalIgnoreCase) ||
                     dirName.Equals("bad_models", StringComparison.OrdinalIgnoreCase) ||
@@ -361,12 +367,28 @@ public class AuditController : Controller
                 }
 
                 string infoPath = System.IO.Path.Combine(dir, "info.el");
+                string rawText = System.IO.File.Exists(infoPath) ? System.IO.File.ReadAllText(infoPath).ToLower() : "";
                 var info = System.IO.File.Exists(infoPath) ? _parser.ParseElFile(infoPath, dirName) : new ElPanelInfo { FolderName = dirName };
 
-                if (dirName.ToLower().Contains(q) ||
-                    info.SerialNumber.ToLower().Contains(q) ||
-                    info.PanelId.ToLower().Contains(q))
+                bool isMatch = dirName.ToLower().Contains(q) ||
+                               (!string.IsNullOrEmpty(info.SerialNumber) && info.SerialNumber.ToLower().Contains(q)) ||
+                               (!string.IsNullOrEmpty(info.PanelId) && info.PanelId.ToLower().Contains(q)) ||
+                               (!string.IsNullOrEmpty(rawText) && rawText.Contains(q));
+
+                if (isMatch)
                 {
+                    string viewUrl = "/Audit/Index?panelIndex=0";
+                    if (categoryName.Contains("Good_models"))
+                        viewUrl = $"/Audit/GoodPanels?panelIndex={i}";
+                    else if (categoryName.Contains("bad_models"))
+                        viewUrl = $"/Audit/DefectivePanels?panelIndex={i}";
+                    else if (categoryName.Contains("Re_evaluation"))
+                        viewUrl = $"/Audit/ReEvaluationPanels?panelIndex={i}";
+                    else if (categoryName.Contains("Useless"))
+                        viewUrl = $"/Audit/UselessPanels?panelIndex={i}";
+                    else
+                        viewUrl = $"/Audit/Index?panelIndex={i}";
+
                     results.Add(new SearchResultItem
                     {
                         FolderName = dirName,
@@ -375,7 +397,8 @@ public class AuditController : Controller
                         FullFolderPath = dir,
                         IsDefective = info.IsDefective,
                         Defects = info.Defects,
-                        Timestamp = info.Timestamp
+                        Timestamp = info.Timestamp,
+                        ViewUrl = viewUrl
                     });
                 }
             }

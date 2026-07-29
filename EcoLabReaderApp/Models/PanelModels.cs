@@ -66,4 +66,5 @@ public class SearchResultItem
     public bool IsDefective { get; set; }
     public List<string> Defects { get; set; } = new();
     public string Timestamp { get; set; } = string.Empty;
+    public string ViewUrl { get; set; } = string.Empty;
 }
