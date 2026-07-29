@@ -50,3 +50,20 @@ public class AuditSaveRequest
     public bool IsMatched { get; set; }
     public List<string> HumanCorrections { get; set; } = new();
 }
+
+public class CropSaveRequest
+{
+    public string FolderName { get; set; } = string.Empty;
+    public string ImageBase64 { get; set; } = string.Empty;
+}
+
+public class SearchResultItem
+{
+    public string FolderName { get; set; } = string.Empty;
+    public string SerialNumber { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public string FullFolderPath { get; set; } = string.Empty;
+    public bool IsDefective { get; set; }
+    public List<string> Defects { get; set; } = new();
+    public string Timestamp { get; set; } = string.Empty;
+}

@@ -1,0 +1,268 @@
+@model EcoLabReaderApp.Models.ElPanelInfo
+@{
+    Layout = "_Layout";
+    int currentIndex = ViewBag.CurrentIndex;
+    int totalPanels = ViewBag.TotalPanels;
+    bool hasPrevious = ViewBag.HasPrevious;
+    bool hasNext = ViewBag.HasNext;
+}
+
+@section Styles {
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+}
+
+@section HeaderActions {
+    <div class="d-flex align-items-center gap-2">
+        @if (hasPrevious)
+        {
+            <a href="/Audit/ReEvaluationPanels?panelIndex=@(currentIndex - 1)" class="btn btn-outline-warning rounded-3 px-3">
+                <i class="fa-solid fa-arrow-right me-1"></i>اللوح السابق
+            </a>
+        }
+        else
+        {
+            <button class="btn btn-outline-secondary rounded-3 px-3" disabled>
+                <i class="fa-solid fa-arrow-right me-1"></i>اللوح السابق
+            </button>
+        }
+
+        @if (hasNext)
+        {
+            <a href="/Audit/ReEvaluationPanels?panelIndex=@(currentIndex + 1)" class="btn btn-warning text-dark rounded-3 px-3 fw-bold">
+                اللوح التالي<i class="fa-solid fa-arrow-left ms-1"></i>
+            </a>
+        }
+
+        <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-3">
+            لوح إعادة التقييم @(currentIndex + 1) من @totalPanels
+        </span>
+    </div>
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="card-custom p-3 border-start border-4 border-warning d-flex align-items-center justify-content-between">
+            <div>
+                <small class="text-light d-block mb-1 fw-semibold">مجلد إعادة التقييم (Re_evaluation):</small>
+                <h3 class="fw-bold text-warning m-0">@totalPanels <span class="fs-6 text-light font-normal">لوح بانتظار المراجعة والقص</span></h3>
+            </div>
+            <div class="fs-1 text-warning opacity-75">
+                <i class="fa-solid fa-folder-arrow-up"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Main Area: Image Preview & Cropper -->
+    <div class="col-lg-8">
+        <div class="card-custom p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold m-0 text-warning"><i class="fa-solid fa-crop me-2"></i>قص ومراجعة اللوح: <code>@Model.FolderName</code></h5>
+                <span class="badge bg-secondary">مجلد: @Model.FolderName</span>
+            </div>
+
+            <!-- Single Full-Width Image Container -->
+            <div class="row g-3">
+                <div class="col-md-12">
+                    <div class="img-container" style="height: 480px;">
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-warning text-dark opacity-75 fs-6" style="z-index: 10;"><i class="fa-solid fa-image me-1"></i>row.tif</span>
+                        <img src="/Audit/Image?folderName=@Model.FolderName" alt="Solar Panel Image" id="imgRaw" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card-custom p-4">
+            <h5 class="fw-bold mb-3"><i class="fa-solid fa-circle-info text-primary me-2"></i>معلومات اللوح من info.el</h5>
+            
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-light d-block mb-1 fw-semibold">الرقم التسلسلي:</small>
+                        <strong class="fs-5 text-warning">@Model.SerialNumber</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-light d-block mb-1 fw-semibold">تاريخ التسجيل:</small>
+                        <strong class="fs-6 text-light">@Model.Timestamp</strong>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded-3 bg-dark border border-secondary">
+                        <small class="text-light d-block mb-1 fw-semibold">حالة القارئ EL الأصلية:</small>
+                        @if (Model.IsDefective)
+                        {
+                            <span class="badge badge-fail fs-6">❌ FAIL (معيب)</span>
+                        }
+                        else
+                        {
+                            <span class="badge badge-pass fs-6">✅ PASS (سليم)</span>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @if (Model.Defects.Count > 0)
+            {
+                <div class="mt-3 p-3 rounded-3 bg-dark border border-warning">
+                    <small class="text-warning fw-bold d-block mb-2"><i class="fa-solid fa-bug me-1"></i>عيوب الخلايا المسجلة:</small>
+                    <div class="d-flex flex-wrap gap-2">
+                        @foreach (var def in Model.Defects)
+                        {
+                            <span class="badge bg-danger fs-6 px-3 py-2"><i class="fa-solid fa-triangle-exclamation me-1"></i>@def</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- Sidebar: Actions & Cropping Controls -->
+    <div class="col-lg-4">
+        <div class="card-custom p-4 position-sticky" style="top: 90px;">
+            <h5 class="fw-bold mb-4 border-bottom border-secondary pb-3 text-warning">
+                <i class="fa-solid fa-scissors me-2"></i>خيارات القص والترك
+            </h5>
+
+            <div class="d-grid gap-3 mb-4">
+                <!-- Action 1: Enable Crop Tool -->
+                <button type="button" class="btn btn-warning text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow" id="btnStartCrop">
+                    <i class="fa-solid fa-crop-simple fs-4"></i>
+                    <span>تفعيل أداة قص الصورة</span>
+                </button>
+
+                <!-- Action 2: Save Crop & Restore to Models -->
+                <button type="button" class="btn btn-success btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow d-none" id="btnSaveCrop">
+                    <i class="fa-solid fa-floppy-disk fs-4"></i>
+                    <span>حفظ الصورة وإعادة الهيكلة</span>
+                </button>
+
+                <!-- Action 3: Keep in Re_evaluation (Skip) -->
+                @if (hasNext)
+                {
+                    <a href="/Audit/ReEvaluationPanels?panelIndex=@(currentIndex + 1)" id="btnKeep" class="btn btn-dark border border-secondary text-light btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow">
+                        <i class="fa-solid fa-forward me-1 fs-4"></i>
+                        <span>ترك في المجلد والتالي (A)</span>
+                    </a>
+                }
+                else
+                {
+                    <a href="/Audit/ReEvaluationPanels" id="btnKeep" class="btn btn-dark border border-secondary text-light btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow">
+                        <i class="fa-solid fa-check me-1 fs-4"></i>
+                        <span>ترك في المجلد (إبقاء - A)</span>
+                    </a>
+                }
+
+                <!-- Action 4: Move to Useless -->
+                <button type="button" class="btn btn-outline-danger btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3" id="btnMoveUseless">
+                    <i class="fa-solid fa-trash-can fs-4"></i>
+                    <span>نقل إلى الألواح التالفة (U)</span>
+                </button>
+            </div>
+
+            <!-- Cropping Instruction Alert -->
+            <div id="cropAlert" class="alert alert-info d-none text-center rounded-3 p-3">
+                <small class="d-block mb-1 fw-bold"><i class="fa-solid fa-info-circle me-1"></i>حدد الإطار المراد قصه من الصورة واضغط حفظ.</small>
+            </div>
+
+            <div id="toastAlert" class="alert d-none text-center rounded-3 p-3"></div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        const folderName = "@Model.FolderName";
+        const currentIndex = @currentIndex;
+        let cropper = null;
+
+        const imgRaw = document.getElementById('imgRaw');
+        const btnStartCrop = document.getElementById('btnStartCrop');
+        const btnSaveCrop = document.getElementById('btnSaveCrop');
+        const cropAlert = document.getElementById('cropAlert');
+        const btnMoveUseless = document.getElementById('btnMoveUseless');
+
+        btnStartCrop.addEventListener('click', () => {
+            if (!cropper) {
+                cropper = new Cropper(imgRaw, {
+                    aspectRatio: NaN,
+                    viewMode: 1,
+                    autoCropArea: 0.8,
+                    responsive: true
+                });
+                btnStartCrop.classList.add('d-none');
+                btnSaveCrop.classList.remove('d-none');
+                cropAlert.classList.remove('d-none');
+            }
+        });
+
+        btnSaveCrop.addEventListener('click', async () => {
+            if (!cropper) return;
+
+            btnSaveCrop.disabled = true;
+            btnSaveCrop.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>جاري حفظ القص...';
+
+            const canvas = cropper.getCroppedCanvas();
+            const base64Image = canvas.toDataURL('image/jpeg', 0.92);
+
+            try {
+                const response = await fetch('/Audit/SaveCroppedImage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName, imageBase64: base64Image })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert(data.message);
+                    window.location.href = `/Audit/ReEvaluationPanels?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء حفظ الصورة: ' + data.message);
+                    btnSaveCrop.disabled = false;
+                    btnSaveCrop.innerHTML = '<i class="fa-solid fa-floppy-disk fs-4"></i><span>حفظ الصورة وإعادة الهيكلة</span>';
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+                btnSaveCrop.disabled = false;
+                btnSaveCrop.innerHTML = '<i class="fa-solid fa-floppy-disk fs-4"></i><span>حفظ الصورة وإعادة الهيكلة</span>';
+            }
+        });
+
+        btnMoveUseless.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/Audit/MoveToUseless', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/ReEvaluationPanels?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء النقل: ' + res.message);
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
+            }
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+            const key = e.key.toLowerCase();
+            if (key === 'a') {
+                e.preventDefault();
+                const keepBtn = document.getElementById('btnKeep');
+                if (keepBtn) window.location.href = keepBtn.getAttribute('href');
+            } else if (key === 'u') {
+                e.preventDefault();
+                btnMoveUseless?.click();
+            }
+        });
+    </script>
+}

@@ -216,6 +216,174 @@ public class AuditController : Controller
         }
     }
 
+    public IActionResult ReEvaluationPanels(int panelIndex = 0)
+    {
+        string path = _restructurer.ReEvaluationPath;
+        var folders = System.IO.Directory.Exists(path)
+            ? System.IO.Directory.GetDirectories(path).OrderBy(d => System.IO.Path.GetFileName(d)).ToList()
+            : new List<string>();
+
+        if (folders.Count == 0)
+        {
+            ViewBag.Message = "لا توجد أية ألواح حالياً في مجلد إعادة التقييم (Re_evaluation).";
+            return View("EmptyState");
+        }
+
+        if (panelIndex < 0) panelIndex = 0;
+        if (panelIndex >= folders.Count) panelIndex = folders.Count - 1;
+
+        string currentFolder = folders[panelIndex];
+        string infoElPath = System.IO.Path.Combine(currentFolder, "info.el");
+        string folderName = System.IO.Path.GetFileName(currentFolder);
+
+        var elInfo = _parser.ParseElFile(infoElPath, folderName);
+
+        ViewBag.CurrentIndex = panelIndex;
+        ViewBag.TotalPanels = folders.Count;
+        ViewBag.HasPrevious = panelIndex > 0;
+        ViewBag.HasNext = panelIndex < folders.Count - 1;
+
+        return View("ReEvaluationPanels", elInfo);
+    }
+
+    public IActionResult UselessPanels(int panelIndex = 0)
+    {
+        string path = _restructurer.UselessPath;
+        var folders = System.IO.Directory.Exists(path)
+            ? System.IO.Directory.GetDirectories(path).OrderBy(d => System.IO.Path.GetFileName(d)).ToList()
+            : new List<string>();
+
+        if (folders.Count == 0)
+        {
+            ViewBag.Message = "لا توجد أية ألواح حالياً في مجلد الألواح التالفة (Useless).";
+            return View("EmptyState");
+        }
+
+        if (panelIndex < 0) panelIndex = 0;
+        if (panelIndex >= folders.Count) panelIndex = folders.Count - 1;
+
+        string currentFolder = folders[panelIndex];
+        string infoElPath = System.IO.Path.Combine(currentFolder, "info.el");
+        string folderName = System.IO.Path.GetFileName(currentFolder);
+
+        var elInfo = _parser.ParseElFile(infoElPath, folderName);
+
+        ViewBag.CurrentIndex = panelIndex;
+        ViewBag.TotalPanels = folders.Count;
+        ViewBag.HasPrevious = panelIndex > 0;
+        ViewBag.HasNext = panelIndex < folders.Count - 1;
+
+        return View("UselessPanels", elInfo);
+    }
+
+    [HttpPost]
+    public IActionResult SaveCroppedImage([FromBody] CropSaveRequest request)
+    {
+        if (string.IsNullOrEmpty(request.FolderName) || string.IsNullOrEmpty(request.ImageBase64))
+        {
+            return BadRequest(new { success = false, message = "بيانات الصورة واللوح غير مكتملة." });
+        }
+
+        string? folderPath = _restructurer.FindPanelFolderPath(request.FolderName);
+        if (folderPath == null || !System.IO.Directory.Exists(folderPath))
+        {
+            return BadRequest(new { success = false, message = $"لم يتم العثور على مجلد اللوح ({request.FolderName})." });
+        }
+
+        try
+        {
+            string base64Data = request.ImageBase64;
+            if (base64Data.Contains(","))
+            {
+                base64Data = base64Data.Split(',')[1];
+            }
+
+            byte[] imageBytes = Convert.FromBase64String(base64Data);
+            string rowTiffPath = System.IO.Path.Combine(folderPath, "row.tif");
+
+            System.IO.File.WriteAllBytes(rowTiffPath, imageBytes);
+
+            bool restored = _restructurer.RestorePanelToModels(request.FolderName, _parser);
+
+            if (restored)
+            {
+                return Json(new { success = true, message = $"تم حفظ الصورة المقصوصة وإعادة اللوح ({request.FolderName}) لمجلد النماذج الرئيسي بنجاح!" });
+            }
+            else
+            {
+                return Json(new { success = false, message = "تم حفظ الصورة المقصوصة ولكن تعذر إرجاع اللوح إلى مجلد النماذج." });
+            }
+        }
+        catch (Exception ex)
+        {
+            return Json(new { success = false, message = "حدث خطأ أثناء حفظ الصورة المقصوصة: " + ex.Message });
+        }
+    }
+
+    public IActionResult Search(string query)
+    {
+        ViewBag.Query = query ?? string.Empty;
+        var results = new List<SearchResultItem>();
+
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return View("Search", results);
+        }
+
+        string q = query.Trim().ToLower();
+
+        var categories = new Dictionary<string, string>
+        {
+            { "Good_models", _restructurer.GoodModelsPath },
+            { "bad_models", _restructurer.BadModelsPath },
+            { "Re_evaluation", _restructurer.ReEvaluationPath },
+            { "Useless", _restructurer.UselessPath },
+            { "Restructured (Root)", _restructurer.RestructuredPath }
+        };
+
+        foreach (var kvp in categories)
+        {
+            string categoryName = kvp.Key;
+            string categoryPath = kvp.Value;
+
+            if (!System.IO.Directory.Exists(categoryPath)) continue;
+
+            foreach (var dir in System.IO.Directory.GetDirectories(categoryPath))
+            {
+                string dirName = System.IO.Path.GetFileName(dir);
+                if (categoryName.Contains("Root") && (
+                    dirName.Equals("Good_models", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("bad_models", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("Re_evaluation", StringComparison.OrdinalIgnoreCase) ||
+                    dirName.Equals("Useless", StringComparison.OrdinalIgnoreCase)))
+                {
+                    continue;
+                }
+
+                string infoPath = System.IO.Path.Combine(dir, "info.el");
+                var info = System.IO.File.Exists(infoPath) ? _parser.ParseElFile(infoPath, dirName) : new ElPanelInfo { FolderName = dirName };
+
+                if (dirName.ToLower().Contains(q) ||
+                    info.SerialNumber.ToLower().Contains(q) ||
+                    info.PanelId.ToLower().Contains(q))
+                {
+                    results.Add(new SearchResultItem
+                    {
+                        FolderName = dirName,
+                        SerialNumber = info.SerialNumber,
+                        Category = categoryName,
+                        FullFolderPath = dir,
+                        IsDefective = info.IsDefective,
+                        Defects = info.Defects,
+                        Timestamp = info.Timestamp
+                    });
+                }
+            }
+        }
+
+        return View("Search", results);
+    }
+
     [HttpGet]
     public IActionResult Image(string folderName)
     {

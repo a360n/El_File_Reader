@@ -90,7 +90,52 @@ public class FileRestructurerService
         string bad = Path.Combine(_badModelsPath, folderName);
         if (Directory.Exists(bad)) return bad;
 
+        string reeval = Path.Combine(_reEvaluationPath, folderName);
+        if (Directory.Exists(reeval)) return reeval;
+
+        string useless = Path.Combine(_uselessPath, folderName);
+        if (Directory.Exists(useless)) return useless;
+
         return null;
+    }
+
+    public bool RestorePanelToModels(string folderName, ElParserService parser)
+    {
+        EnsureDirectoriesExist();
+        string? source = FindPanelFolderPath(folderName);
+        if (source == null || !Directory.Exists(source)) return false;
+
+        string infoElPath = Path.Combine(source, "info.el");
+        var info = parser.ParseElFile(infoElPath, folderName);
+
+        string targetParent = (info.IsDefective || info.Defects.Count > 0) ? _badModelsPath : _goodModelsPath;
+        string target = Path.Combine(targetParent, folderName);
+
+        if (Path.GetFullPath(source).Equals(Path.GetFullPath(target), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        try
+        {
+            if (Directory.Exists(target))
+            {
+                Directory.Delete(target, true);
+            }
+            Directory.Move(source, target);
+            return true;
+        }
+        catch
+        {
+            try
+            {
+                CopyDirectory(source, target);
+                Directory.Delete(source, true);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
     }
 
     public bool MoveToReEvaluation(string folderName)

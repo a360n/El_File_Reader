@@ -1,0 +1,120 @@
+@model List<EcoLabReaderApp.Models.SearchResultItem>
+@{
+    Layout = "_Layout";
+    string currentQuery = ViewBag.Query as string ?? "";
+}
+
+<!-- Search Header Banner -->
+<div class="row g-3 mb-4">
+    <div class="col-md-12">
+        <div class="card-custom p-4">
+            <h4 class="fw-bold text-info mb-3"><i class="fa-solid fa-magnifying-glass me-2"></i>البحث عن لوح بالرقم التسلسلي واستعراض المسار</h4>
+            
+            <form method="get" action="/Audit/Search" class="row g-3">
+                <div class="col-md-9">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-dark border-secondary text-info"><i class="fa-solid fa-barcode"></i></span>
+                        <input type="text" name="query" class="form-control bg-dark text-white border-secondary fs-5" placeholder="أدخل الرقم التسلسلي (مثال: ANM...) أو اسم المجلد..." value="@currentQuery" required autofocus />
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-custom-blue btn-lg w-100 fw-bold py-3 fs-5">
+                        <i class="fa-solid fa-magnifying-glass me-1"></i>بحث الآن
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Search Results Section -->
+@if (!string.IsNullOrEmpty(currentQuery))
+{
+    <div class="card-custom p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-3">
+            <h5 class="fw-bold m-0"><i class="fa-solid fa-list-check me-2 text-warning"></i>نتائج البحث عن: <span class="text-info">"@currentQuery"</span></h5>
+            <span class="badge bg-secondary fs-6">تم العثور على @Model.Count نتيجة</span>
+        </div>
+
+        @if (Model.Count == 0)
+        {
+            <div class="alert alert-warning text-center p-4 rounded-3 m-0">
+                <i class="fa-solid fa-triangle-exclamation fs-3 mb-2 d-block text-warning"></i>
+                <h5 class="fw-bold">لم يتم العثور على أية ألواح مطابقة للرقم التسلسلي الإدخال!</h5>
+                <p class="m-0 text-muted">يرجى التأكد من كتابة الرقم التسلسلي أو اسم المجلد بشكل صحيح والبحث مرة أخرى.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-custom align-middle m-0">
+                    <thead>
+                        <tr>
+                            <th>الرقم التسلسلي / اسم المجلد</th>
+                            <th>المجلد والتصنيف الحالي</th>
+                            <th>المسار الكامل على القرص</th>
+                            <th>حالة الفحص والأضرار</th>
+                            <th>التاريخ والوقت</th>
+                            <th>المعاينة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <strong class="fs-5 text-warning d-block">@item.SerialNumber</strong>
+                                    <small class="text-muted">مجلد: <code>@item.FolderName</code></small>
+                                </td>
+                                <td>
+                                    @if (item.Category.Contains("Good_models"))
+                                    {
+                                        <span class="badge bg-success fs-6"><i class="fa-solid fa-circle-check me-1"></i>Good_models (سليم)</span>
+                                    }
+                                    else if (item.Category.Contains("bad_models"))
+                                    {
+                                        <span class="badge bg-danger fs-6"><i class="fa-solid fa-triangle-exclamation me-1"></i>bad_models (معيب)</span>
+                                    }
+                                    else if (item.Category.Contains("Re_evaluation"))
+                                    {
+                                        <span class="badge bg-warning text-dark fs-6"><i class="fa-solid fa-folder-arrow-up me-1"></i>Re_evaluation</span>
+                                    }
+                                    else if (item.Category.Contains("Useless"))
+                                    {
+                                        <span class="badge bg-secondary fs-6"><i class="fa-solid fa-trash-can me-1"></i>Useless (تالف)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-primary fs-6">@item.Category</span>
+                                    }
+                                </td>
+                                <td>
+                                    <code class="text-info font-normal small dir-ltr d-block text-wrap" style="max-width: 380px;">@item.FullFolderPath</code>
+                                </td>
+                                <td>
+                                    @if (item.IsDefective || item.Defects.Count > 0)
+                                    {
+                                        <span class="badge badge-fail mb-1">❌ FAIL (معيب)</span>
+                                        <div class="small text-danger fw-bold">@item.Defects.Count عيوب خلايا</div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-pass">✅ PASS (سليم)</span>
+                                    }
+                                </td>
+                                <td>
+                                    <small class="text-light">@item.Timestamp</small>
+                                </td>
+                                <td>
+                                    <a href="/Audit/Index?panelIndex=0" class="btn btn-outline-info btn-sm rounded-3">
+                                        <i class="fa-solid fa-eye me-1"></i>معاينة
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
