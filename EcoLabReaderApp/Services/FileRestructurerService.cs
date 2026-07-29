@@ -51,29 +51,79 @@ public class FileRestructurerService
 
     public void EnsureDirectoriesExist()
     {
-        if (!Directory.Exists(_containerPath))
+        if (!Directory.Exists(_containerPath)) Directory.CreateDirectory(_containerPath);
+        if (!Directory.Exists(_restructuredPath)) Directory.CreateDirectory(_restructuredPath);
+        if (!Directory.Exists(_goodModelsPath)) Directory.CreateDirectory(_goodModelsPath);
+        if (!Directory.Exists(_badModelsPath)) Directory.CreateDirectory(_badModelsPath);
+        if (!Directory.Exists(_reEvaluationPath)) Directory.CreateDirectory(_reEvaluationPath);
+        if (!Directory.Exists(_uselessPath)) Directory.CreateDirectory(_uselessPath);
+
+        FlattenNestedDirectories(_reEvaluationPath);
+        FlattenNestedDirectories(_uselessPath);
+        FlattenNestedDirectories(_goodModelsPath);
+        FlattenNestedDirectories(_badModelsPath);
+        FlattenNestedDirectories(_restructuredPath);
+    }
+
+    public void FlattenNestedDirectories(string basePath)
+    {
+        if (!Directory.Exists(basePath)) return;
+
+        try
         {
-            Directory.CreateDirectory(_containerPath);
+            var topDirs = Directory.GetDirectories(basePath).ToList();
+            foreach (var topDir in topDirs)
+            {
+                if (!Directory.Exists(topDir)) continue;
+
+                var subDirs = Directory.GetDirectories(topDir).ToList();
+                foreach (var subDir in subDirs)
+                {
+                    string subName = Path.GetFileName(subDir);
+                    string targetPath = Path.Combine(basePath, subName);
+
+                    bool isPanelFolder = File.Exists(Path.Combine(subDir, "info.el")) ||
+                                         File.Exists(Path.Combine(subDir, "row.tif"));
+
+                    if (isPanelFolder)
+                    {
+                        if (Path.GetFullPath(subDir).Equals(Path.GetFullPath(targetPath), StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        if (Directory.Exists(targetPath))
+                        {
+                            DateTime subTime = Directory.GetLastWriteTimeUtc(subDir);
+                            DateTime targetTime = Directory.GetLastWriteTimeUtc(targetPath);
+
+                            if (subTime > targetTime)
+                            {
+                                Directory.Delete(targetPath, true);
+                                SafeMoveDirectory(subDir, targetPath);
+                            }
+                            else
+                            {
+                                Directory.Delete(subDir, true);
+                            }
+                        }
+                        else
+                        {
+                            SafeMoveDirectory(subDir, targetPath);
+                        }
+                    }
+                }
+
+                if (!File.Exists(Path.Combine(topDir, "info.el")) && !File.Exists(Path.Combine(topDir, "row.tif")))
+                {
+                    if (Directory.GetFiles(topDir).Length == 0 && Directory.GetDirectories(topDir).Length == 0)
+                    {
+                        Directory.Delete(topDir, true);
+                    }
+                }
+            }
         }
-        if (!Directory.Exists(_restructuredPath))
+        catch (Exception ex)
         {
-            Directory.CreateDirectory(_restructuredPath);
-        }
-        if (!Directory.Exists(_goodModelsPath))
-        {
-            Directory.CreateDirectory(_goodModelsPath);
-        }
-        if (!Directory.Exists(_badModelsPath))
-        {
-            Directory.CreateDirectory(_badModelsPath);
-        }
-        if (!Directory.Exists(_reEvaluationPath))
-        {
-            Directory.CreateDirectory(_reEvaluationPath);
-        }
-        if (!Directory.Exists(_uselessPath))
-        {
-            Directory.CreateDirectory(_uselessPath);
+            Console.WriteLine($"Error flattening {basePath}: {ex.Message}");
         }
     }
 
