@@ -366,17 +366,22 @@ public class AuditController : Controller
                     continue;
                 }
 
+                // 1. Fast memory check on folder name first
+                bool isMatch = dirName.ToLower().Contains(q);
                 string infoPath = System.IO.Path.Combine(dir, "info.el");
-                string rawText = System.IO.File.Exists(infoPath) ? System.IO.File.ReadAllText(infoPath).ToLower() : "";
-                var info = System.IO.File.Exists(infoPath) ? _parser.ParseElFile(infoPath, dirName) : new ElPanelInfo { FolderName = dirName };
 
-                bool isMatch = dirName.ToLower().Contains(q) ||
-                               (!string.IsNullOrEmpty(info.SerialNumber) && info.SerialNumber.ToLower().Contains(q)) ||
-                               (!string.IsNullOrEmpty(info.PanelId) && info.PanelId.ToLower().Contains(q)) ||
-                               (!string.IsNullOrEmpty(rawText) && rawText.Contains(q));
+                // 2. Quick raw text scan ONLY if folder name didn't match
+                if (!isMatch && System.IO.File.Exists(infoPath))
+                {
+                    string rawText = System.IO.File.ReadAllText(infoPath);
+                    isMatch = rawText.IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0;
+                }
 
+                // 3. Parse info.el ONLY for matched folders!
                 if (isMatch)
                 {
+                    var info = System.IO.File.Exists(infoPath) ? _parser.ParseElFile(infoPath, dirName) : new ElPanelInfo { FolderName = dirName };
+
                     string viewUrl = "/Audit/Index?panelIndex=0";
                     if (categoryName.Contains("Good_models"))
                         viewUrl = $"/Audit/GoodPanels?panelIndex={i}";
