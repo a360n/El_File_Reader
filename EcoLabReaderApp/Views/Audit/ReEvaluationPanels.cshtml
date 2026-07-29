@@ -140,6 +140,12 @@
                     <span>حفظ الصورة وإعادة الهيكلة</span>
                 </button>
 
+                <!-- Action: Restore to Good/bad Models without cropping -->
+                <button type="button" class="btn btn-info text-dark btn-lg fw-bold d-flex align-items-center justify-content-center gap-2 py-3 shadow" id="btnRestoreModels" title="نقل هذا اللوح مباشرة إلى مجلد إعادة الهيكلة (سواء جيدة أو سيئة حسب اللوح)">
+                    <i class="fa-solid fa-folder-tree fs-4"></i>
+                    <span>نقل لمجلد إعادة الهيكلة (Good / Bad)</span>
+                </button>
+
                 <!-- Action 3: Keep in Re_evaluation (Skip) -->
                 @if (hasNext)
                 {
@@ -229,6 +235,26 @@
                 alert('خطأ بالاتصال بالسيرفر: ' + err.message);
                 btnSaveCrop.disabled = false;
                 btnSaveCrop.innerHTML = '<i class="fa-solid fa-floppy-disk fs-4"></i><span>حفظ الصورة وإعادة الهيكلة</span>';
+            }
+        });
+
+        const btnRestoreModels = document.getElementById('btnRestoreModels');
+        btnRestoreModels?.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/Audit/RestoreToModels', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ folderName: folderName })
+                });
+
+                const res = await response.json();
+                if (res.success) {
+                    window.location.href = `/Audit/ReEvaluationPanels?panelIndex=${currentIndex}`;
+                } else {
+                    alert('خطأ أثناء النقل: ' + res.message);
+                }
+            } catch (err) {
+                alert('خطأ بالاتصال بالسيرفر: ' + err.message);
             }
         });
 

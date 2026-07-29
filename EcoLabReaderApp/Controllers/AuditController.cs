@@ -216,6 +216,26 @@ public class AuditController : Controller
         }
     }
 
+    [HttpPost]
+    public IActionResult RestoreToModels([FromBody] AuditSaveRequest request)
+    {
+        if (string.IsNullOrEmpty(request.FolderName))
+        {
+            return BadRequest(new { success = false, message = "FolderName is required" });
+        }
+
+        bool restored = _restructurer.RestorePanelToModels(request.FolderName, _parser);
+
+        if (restored)
+        {
+            return Json(new { success = true, message = $"تم إرجاع اللوح ({request.FolderName}) إلى مجلد النماذج والتصنيف الأصلي بنجاح" });
+        }
+        else
+        {
+            return Json(new { success = false, message = $"فشل نقل المجلد ({request.FolderName}) إلى مجلد النماذج" });
+        }
+    }
+
     public IActionResult ReEvaluationPanels(int panelIndex = 0)
     {
         string path = _restructurer.ReEvaluationPath;
