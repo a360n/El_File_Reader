@@ -22,6 +22,20 @@ public class ElPanelInfo
     public string FolderPath { get; set; } = string.Empty;
     public string FolderName { get; set; } = string.Empty;
     public string Rating { get; set; } = string.Empty;
+
+    public bool HasJsonFile { get; set; }
+    public JsonPanelInfo? JsonData { get; set; }
+}
+
+public class JsonPanelInfo
+{
+    public string FolderName { get; set; } = string.Empty;
+    public string SerialNumber { get; set; } = string.Empty;
+    public string PanelId { get; set; } = string.Empty;
+    public bool IsDefective { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Timestamp { get; set; } = string.Empty;
+    public List<string> Defects { get; set; } = new();
 }
 
 public class AuditRecord

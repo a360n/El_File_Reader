@@ -76,7 +76,124 @@ public class ElParserService
         result.IsDefective = defects.Count > 0;
         result.Status = result.IsDefective ? "FAIL (معيب)" : "PASS (سليم)";
 
+        // Read info.json if present
+        string folderDir = Path.GetDirectoryName(infoElPath) ?? string.Empty;
+        string jsonPath = Path.Combine(folderDir, "info.json");
+        if (File.Exists(jsonPath))
+        {
+            try
+            {
+                string jsonText = File.ReadAllText(jsonPath);
+                var jsonInfo = System.Text.Json.JsonSerializer.Deserialize<JsonPanelInfo>(jsonText);
+                if (jsonInfo != null)
+                {
+                    result.HasJsonFile = true;
+                    result.JsonData = jsonInfo;
+                }
+            }
+            catch
+            {
+                result.HasJsonFile = false;
+                result.JsonData = null;
+            }
+        }
+
         return result;
+    }
+
+    public bool SyncOrGenerateJsonForFolder(string panelFolderPath)
+    {
+        if (!Directory.Exists(panelFolderPath)) return false;
+
+        string infoElPath = Path.Combine(panelFolderPath, "info.el");
+        if (!File.Exists(infoElPath)) return false;
+
+        string folderName = Path.GetFileName(panelFolderPath);
+        var elInfo = ParseElFile(infoElPath, folderName);
+
+        string jsonPath = Path.Combine(panelFolderPath, "info.json");
+
+        var expectedJsonData = new JsonPanelInfo
+        {
+            FolderName = elInfo.FolderName,
+            SerialNumber = elInfo.SerialNumber,
+            PanelId = elInfo.PanelId,
+            IsDefective = elInfo.IsDefective,
+            Status = elInfo.Status,
+            Timestamp = elInfo.Timestamp,
+            Defects = elInfo.Defects
+        };
+
+        var serializerOptions = new System.Text.Json.JsonSerializerOptions
+        {
+            WriteIndented = true,
+            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+        };
+
+        if (File.Exists(jsonPath))
+        {
+            try
+            {
+                string existingJsonText = File.ReadAllText(jsonPath);
+                var existingJson = System.Text.Json.JsonSerializer.Deserialize<JsonPanelInfo>(existingJsonText);
+
+                if (existingJson != null && IsJsonMatchingEl(existingJson, expectedJsonData))
+                {
+                    return false; // Matched, no changes needed
+                }
+            }
+            catch
+            {
+                // Corrupt file, overwrite
+            }
+        }
+
+        string newJsonText = System.Text.Json.JsonSerializer.Serialize(expectedJsonData, serializerOptions);
+        File.WriteAllText(jsonPath, newJsonText);
+        return true; // Created or updated
+    }
+
+    private bool IsJsonMatchingEl(JsonPanelInfo json, JsonPanelInfo el)
+    {
+        if (json.SerialNumber != el.SerialNumber) return false;
+        if (json.IsDefective != el.IsDefective) return false;
+        if (json.Status != el.Status) return false;
+        if (json.Defects.Count != el.Defects.Count) return false;
+        for (int i = 0; i < json.Defects.Count; i++)
+        {
+            if (json.Defects[i] != el.Defects[i]) return false;
+        }
+        return true;
+    }
+
+    public (int processedCount, int createdOrUpdatedCount, int skippedCount) ProcessAllPanelsJson(string goodModelsPath, string badModelsPath)
+    {
+        int processedCount = 0;
+        int createdOrUpdatedCount = 0;
+        int skippedCount = 0;
+
+        var targetPaths = new[] { goodModelsPath, badModelsPath };
+
+        foreach (var path in targetPaths)
+        {
+            if (!Directory.Exists(path)) continue;
+
+            foreach (var dir in Directory.GetDirectories(path))
+            {
+                processedCount++;
+                bool changed = SyncOrGenerateJsonForFolder(dir);
+                if (changed)
+                {
+                    createdOrUpdatedCount++;
+                }
+                else
+                {
+                    skippedCount++;
+                }
+            }
+        }
+
+        return (processedCount, createdOrUpdatedCount, skippedCount);
     }
 
     public static string IndexToCell0Based(string idxStr)

@@ -236,6 +236,24 @@ public class AuditController : Controller
         }
     }
 
+    [HttpPost]
+    public IActionResult GenerateJsonFiles()
+    {
+        var (processedCount, createdOrUpdatedCount, skippedCount) = _parser.ProcessAllPanelsJson(
+            _restructurer.GoodModelsPath,
+            _restructurer.BadModelsPath
+        );
+
+        return Json(new
+        {
+            success = true,
+            processedCount,
+            createdOrUpdatedCount,
+            skippedCount,
+            message = $"تم فحص {processedCount} مجلداً بنجاح! (تم إنشاء/تحديث {createdOrUpdatedCount} ملفات JSON، وتخطي {skippedCount} ملف متطابق)."
+        });
+    }
+
     public IActionResult ReEvaluationPanels(int panelIndex = 0)
     {
         string path = _restructurer.ReEvaluationPath;
